@@ -1,0 +1,22 @@
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Log files
+*.log
+discord.log
+
+# Virtual environment folder (if you use one)
+venv/
+.venv/
+env/
+.env/
+
+# IDE folders (optional but good practice)
+.vscode/
+.idea/
