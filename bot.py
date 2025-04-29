@@ -1,3 +1,4 @@
+# --- IMPORTS ---
 import discord
 import os
 import google.generativeai as genai
@@ -5,6 +6,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import logging
 from collections import deque # Efficient for fixed-size history
+import asyncio # Potentially needed for delays, though not currently used
 
 # --- Configuration ---
 load_dotenv()
@@ -12,6 +14,7 @@ DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # --- !!! PERSONALITY GOES HERE (as System Instruction) !!! ---
+# This includes the instruction to share the specific Spotify playlist
 PERSONA_INSTRUCTION = """
 Alright, switch it up. You're adopting a more *relaxed* online persona, kinda like a chill e-girl or just someone who's very online but not trying too hard. Less hyper, more laid-back.
 
@@ -45,9 +48,7 @@ Remember the conversation history provided.
 
 # --- History Configuration ---
 MAX_HISTORY_MESSAGES = 10 # Store last 10 messages total (e.g., 5 user, 5 model pairs)
-# Dictionary to store history per channel: {channel_id: deque([...])}
-# Each item in the deque will be a dict: {'role': 'user'/'model', 'parts': ['text']}
-conversation_history = {}
+conversation_history = {} # Dictionary to store history per channel: {channel_id: deque([...])}
 
 # --- Logging Setup ---
 # Configure discord.py logger
@@ -58,28 +59,42 @@ discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(
 discord_logger.addHandler(discord_log_handler)
 
 # Configure application logger
-logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s',
-                    handlers=[logging.FileHandler("bot.log", mode='a'), logging.StreamHandler()])
-logger = logging.getLogger(__name__)
+# Ensure logs go to both file and console for easier debugging
+log_formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+log_file_handler = logging.FileHandler("bot.log", mode='a', encoding='utf-8') # Append mode
+log_file_handler.setFormatter(log_formatter)
+log_stream_handler = logging.StreamHandler() # To console
+log_stream_handler.setFormatter(log_formatter)
 
-# --- Gemini Configuration ---
+logging.basicConfig(level=logging.INFO, handlers=[log_file_handler, log_stream_handler])
+logger = logging.getLogger(__name__) # Get logger for this specific file
+
+# --- Generative AI Model Configuration ---
 if not GOOGLE_API_KEY:
     logger.critical("GOOGLE_API_KEY environment variable not found. Exiting.")
     exit()
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
-    MODEL_NAME = 'gemini-1.5-pro-latest' # Or your preferred Gemini model
+
+    # --- !!! MODEL NAME CHANGE HERE !!! ---
+    # Switch to a Gemma model.
+    # **ACTION REQUIRED:** Verify the exact model name available in your Google Cloud Console.
+    # Common options: 'gemma_7b', 'gemma_7b-it', 'gemma2-9b-it'. Replace 'gemma_7b' if needed.
+    MODEL_NAME = 'gemma_7b'
+    # --- !!! END MODEL NAME CHANGE !!! ---
+
     logger.info(f"Configuring Google Generative AI with model: {MODEL_NAME}")
 
-    # Initialize the model with the system instruction for the persona
-    # This instruction will be implicitly used for all generate_content calls on this model object
     model = genai.GenerativeModel(
         MODEL_NAME,
         system_instruction=PERSONA_INSTRUCTION
+        # Optional: Add safety_settings here if needed for the new model
+        # safety_settings=[...]
     )
-    logger.info("Google Generative AI model initialized successfully with system instruction.")
+    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with system instruction.")
 except Exception as e:
-    logger.critical(f"Error configuring Google Generative AI or initializing model: {e}", exc_info=True)
+    # Ensure the model name is included in the error message for clarity
+    logger.critical(f"Error configuring Google Generative AI or initializing model '{MODEL_NAME}': {e}", exc_info=True)
     exit()
 
 # --- Discord Bot Setup ---
@@ -92,56 +107,39 @@ client = discord.Client(intents=intents)
 async def on_ready():
     """Event handler for when the bot successfully connects to Discord."""
     logger.info(f'Logged in as {client.user.name} (ID: {client.user.id})')
+    logger.info(f'Using AI Model: {MODEL_NAME}') # Log the model being used
     logger.info('Bot is ready and listening for mentions!')
     print("-" * 20)
     print(f" Bot User: {client.user.name}")
     print(f" Bot ID:   {client.user.id}")
+    print(f" AI Model: {MODEL_NAME}") # Print model name on ready
     print(" Status:   Ready")
     print("-" * 20)
 
 @client.event
 async def on_message(message: discord.Message):
     """Event handler for when a message is received."""
-    # Ignore messages sent by the bot itself
     if message.author == client.user:
         return
 
-    # --- Check if the bot was mentioned ---
-    mentioned = client.user.mentioned_in(message)
-    is_direct_mention_at_start = False
+    # --- Check if the bot was mentioned (directly at the start) ---
+    mention_needed = False
+    if message.content.startswith(f'<@{client.user.id}>') or message.content.startswith(f'<@!{client.user.id}>'):
+         mention_needed = True
 
-    # Check if the message *starts* with a mention (e.g., "@Bot hello")
-    # discord.py's mentioned_in checks anywhere in the message
-    if not mentioned:
-        # Check for both mention formats (<@USER_ID> and <@!USER_ID>)
-        mention_formats = [f'<@{client.user.id}>', f'<@!{client.user.id}>']
-        for mention in mention_formats:
-            # Use startswith after stripping leading whitespace
-            if message.content.strip().startswith(mention):
-                is_direct_mention_at_start = True
-                break
-        # If not mentioned anywhere AND not starting with a direct mention, ignore
-        if not is_direct_mention_at_start:
-            return
-    elif not message.content.strip().startswith((f'<@{client.user.id}>', f'<@!{client.user.id}>')):
-        # It was mentioned, but not at the very beginning (e.g., "hello @Bot how are you")
-        # You might want to ignore these depending on desired behavior. For now, we process them.
-        # logger.debug(f"Bot mentioned, but not at the start of the message in C:{message.channel.id}")
-        pass # Continue processing mentions anywhere in the message
+    if not mention_needed:
+         return # Strict: only process if mentioned at the start
 
     logger.info(f"Processing mention from {message.author} (ID: {message.author.id}) in channel #{message.channel.name} (ID: {message.channel.id})")
     logger.debug(f"Original message content: '{message.content}'")
 
     # --- Extract user prompt ---
     user_prompt = message.content
-    # Remove all occurrences of the bot's mention
     for mention in [f'<@!{client.user.id}>', f'<@{client.user.id}>']:
         user_prompt = user_prompt.replace(mention, '').strip()
 
-    # Check if the prompt is empty after removing the mention
     if not user_prompt:
         logger.warning(f"Mention received from {message.author} but the prompt is empty after removing mention.")
-        # Optional: Send a reply if pinged with no text
         # await message.reply("hey, you pinged me but didn't say anything?", mention_author=False)
         return
 
@@ -150,71 +148,74 @@ async def on_message(message: discord.Message):
     # --- Manage Conversation History ---
     channel_id = message.channel.id
     if channel_id not in conversation_history:
-        # Use deque for efficient fixed-size history management (FIFO)
         conversation_history[channel_id] = deque(maxlen=MAX_HISTORY_MESSAGES)
         logger.info(f"Initialized new conversation history deque for channel {channel_id} (max size: {MAX_HISTORY_MESSAGES})")
 
-    # Get the history deque for this channel
     current_channel_history_deque = conversation_history[channel_id]
-
-    # Format history for the API (needs to be a list of dicts)
-    # Convert the deque to a list for sending to the API
     api_history = list(current_channel_history_deque)
     logger.debug(f"Retrieved history for channel {channel_id}. Current length: {len(api_history)}")
 
-    # --- Call Gemini API ---
-    async with message.channel.typing(): # Show "Bot is typing..." indicator
+    # --- Call Generative AI API ---
+    async with message.channel.typing():
         try:
-            logger.debug(f"Sending request to Gemini for channel {channel_id}. History length: {len(api_history)}. Prompt: '{user_prompt}'")
-
-            # Construct the messages payload for the API
-            # The history list already contains dicts in the correct format
-            # Add the current user message to the end
+            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME}.")
             messages_payload = api_history + [{'role': 'user', 'parts': [user_prompt]}]
+            logger.debug(f"Channel {channel_id}: Sending payload with {len(messages_payload)} total parts to model {MODEL_NAME}.")
 
-            # Generate content using the model (which has the system instruction pre-configured)
+            # THE ACTUAL API CALL using the initialized 'model' object
             response = await model.generate_content_async(
                 contents=messages_payload,
-                # safety_settings=... # Optional: configure safety settings if needed
-                # generation_config=... # Optional: configure temperature, top_p, etc.
             )
 
-            # --- Process and Store Response ---
-            # Check if the response was blocked or has no text
-            if not response.parts:
-                 logger.warning(f"Gemini response was empty or blocked. Full response object: {response}")
-                 try:
-                     # Attempt to get the block reason if available
-                     block_reason = response.prompt_feedback.block_reason
-                     block_reason_message = f"uh oh, couldn't generate a response for that. reason: {block_reason}"
-                     logger.warning(f"Response blocked due to: {block_reason}")
-                 except Exception: # Catch potential attribute errors if prompt_feedback isn't as expected
-                     block_reason_message = "lol idk, brain kinda blanked on that one sorry~ seems like it got blocked?"
-                     logger.warning("Response blocked, but couldn't determine specific reason.")
-                 await message.reply(block_reason_message, mention_author=False)
-                 return # Stop processing this message
+            # Log response feedback details (safety etc.)
+            try:
+                # Accessing feedback might differ slightly between model families,
+                # using a general try/except is safer.
+                logger.info(f"Channel {channel_id}: API response feedback: {response.prompt_feedback}")
+            except Exception:
+                logger.warning(f"Channel {channel_id}: Could not access detailed response.prompt_feedback.")
 
-            bot_response_text = response.text
-            logger.debug(f"Received Gemini response (length: {len(bot_response_text)}): '{bot_response_text[:200]}...'") # Log beginning of response
+            # --- Process and Store Response ---
+            if not response.parts:
+                 logger.warning(f"Channel {channel_id}: API response for model {MODEL_NAME} was empty or blocked. Full response object: {response}")
+                 block_reason_message = "lol idk, brain kinda blanked on that one sorry~"
+                 try:
+                     # Attempt to get block reason, might not always be present
+                     block_reason = response.prompt_feedback.block_reason
+                     if block_reason:
+                          block_reason_message = f"uh oh, couldn't generate a response for that. reason: {block_reason}"
+                          logger.warning(f"Response blocked due to: {block_reason}")
+                     else:
+                          logger.warning("Response blocked, but no specific reason provided in prompt_feedback.")
+                          block_reason_message += " seems like it got blocked?"
+                 except Exception as feedback_e:
+                     logger.warning(f"Error accessing block reason: {feedback_e}")
+                     block_reason_message += " couldn't figure out why."
+                 await message.reply(block_reason_message, mention_author=False)
+                 return
+
+            # Try to get text content
+            try:
+                bot_response_text = response.text
+                logger.debug(f"Received API response (length: {len(bot_response_text)}): '{bot_response_text[:200]}...'")
+            except ValueError as ve:
+                # Handle cases where the response isn't simple text (less common with basic text models)
+                logger.error(f"Channel {channel_id}: API response did not contain simple text. Error: {ve}. Response parts: {response.parts}", exc_info=True)
+                await message.reply("oof, got a weird response back, wasn't just text. idk what to do with that.", mention_author=False)
+                return
 
             # --- Store interaction in history AFTER successful generation ---
-            # Append the user's prompt message to the deque
             current_channel_history_deque.append({'role': 'user', 'parts': [user_prompt]})
-            # Append the model's response message to the deque
             current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]})
-            # The deque automatically discards the oldest item if maxlen is exceeded
-
             logger.debug(f"Updated history for channel {channel_id}. New length: {len(current_channel_history_deque)}")
 
             # --- Send Response to Discord ---
-            # Split the response if it's too long for a single Discord message
             if len(bot_response_text) <= 2000:
-                await message.reply(bot_response_text, mention_author=False) # Use reply for context, don't ping user
+                await message.reply(bot_response_text, mention_author=False)
             else:
                 logger.warning(f"Response length ({len(bot_response_text)}) exceeds 2000 chars. Splitting message.")
                 response_parts = []
-                # Split into chunks (leaving some buffer room for Discord limits)
-                for i in range(0, len(bot_response_text), 1990):
+                for i in range(0, len(bot_response_text), 1990): # Split safely
                     response_parts.append(bot_response_text[i:i+1990])
 
                 first_part = True
@@ -223,33 +224,34 @@ async def on_message(message: discord.Message):
                         await message.reply(part.strip(), mention_author=False)
                         first_part = False
                     else:
-                        # Send subsequent parts as regular messages in the channel
                         await message.channel.send(part.strip())
-                    # Consider adding a small delay between parts if needed, though usually not necessary
-                    # await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.5) # Small delay between parts
             logger.info(f"Successfully sent response to channel {channel_id}.")
 
+        # --- General Error Catch ---
         except Exception as e:
-            logger.error(f"An error occurred during Gemini API call or Discord message sending: {e}", exc_info=True)
+            logger.error(f"Channel {channel_id}: Caught exception during API processing/sending for model {MODEL_NAME}. Type: {type(e).__name__}, Error: {e}", exc_info=True)
             try:
-                # Send a user-friendly error message (fitting the persona)
                 await message.reply("oof, something went wrong on my end trying to respond. maybe try again in a bit?", mention_author=False)
             except discord.errors.Forbidden:
-                 logger.error(f"Bot lacks permission to send messages in channel {message.channel.id} (ID: {message.channel.id})")
+                 logger.error(f"Channel {channel_id}: Bot lacks permission to send error reply message.")
             except Exception as inner_e:
-                 logger.error(f"Failed even to send the error message back to Discord: {inner_e}", exc_info=True)
+                 logger.error(f"Channel {channel_id}: Failed to send the 'oof' error message back to Discord: {inner_e}", exc_info=True)
 
 # --- Run the Bot ---
 if __name__ == "__main__":
     if not DISCORD_TOKEN:
         logger.critical("DISCORD_BOT_TOKEN environment variable not found. The bot cannot start.")
     else:
-        logger.info("Attempting to connect to Discord...")
+        logger.info(f"Attempting to connect to Discord using model {MODEL_NAME}...")
         try:
-            # Start the bot. log_handler=None prevents discord.py from setting up its own root logger handler,
-            # allowing our specific discord logger setup to work without conflict.
+            # Start the bot using the configured loggers
             client.run(DISCORD_TOKEN, log_handler=None)
         except discord.errors.LoginFailure:
             logger.critical("Invalid Discord Bot Token provided. Please check your DISCORD_BOT_TOKEN environment variable.")
+        except discord.errors.PrivilegedIntentsRequired:
+             logger.critical("Privileged Intents (Message Content) are not enabled for the bot in the Discord Developer Portal.")
+             print("\n *** ACTION NEEDED: Go to your bot's settings on https://discord.com/developers/applications -> Bot -> Privileged Gateway Intents -> Enable 'Message Content Intent' ***\n")
         except Exception as e:
-             logger.critical(f"An unexpected error occurred while running the bot: {e}", exc_info=True)
+             # Catch any other exceptions during startup or runtime
+             logger.critical(f"An unexpected error occurred while starting or running the bot: {e}", exc_info=True)
