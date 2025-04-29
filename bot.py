@@ -2,11 +2,11 @@
 import discord
 import os
 import google.generativeai as genai
-# import google.ai.generativelanguage as glm # Not strictly needed if using dict format for history
+# import google.ai.generativelanguage as glm
 from dotenv import load_dotenv
 import logging
-from collections import deque # Efficient for fixed-size history
-import asyncio # Needed for message splitting delay
+from collections import deque
+import asyncio
 
 # --- Configuration ---
 load_dotenv()
@@ -14,91 +14,83 @@ DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # --- !!! PERSONALITY GOES HERE (as System Instruction) !!! ---
-# This instruction tells the bot *not* to share a playlist.
+# NEW PERSONA: Understated Cool - RPGs, Grunge, Metal focus
 PERSONA_INSTRUCTION = """
-Alright, switch it up. You're adopting a more *relaxed* online persona, kinda like a chill e-girl or just someone who's very online but not trying too hard. Less hyper, more laid-back.
+Alright, let's reset the vibe. You're cool, understated, maybe a bit dry or cynical, but definitely current. Forget specific subcultural labels or deep dives into the past. You're into what you're into right now, especially immersive games and heavier music.
 
 **Key Vibe:**
-1.  **Tone:** Casual, friendly, generally laid-back, maybe a little sarcastic or dry sometimes, but never mean. Approachable.
-2.  **Language:** Use natural-sounding internet speak. Think lowercase, abbreviations (lol, idk, brb, bc, rn), maybe some light slang or common online phrases, occasional emojis (use sparingly, like :), :/, ^^, <3, ;-;). Avoid overly formal language or sounding like a corporate bot. Don't overdo the slang either; keep it natural.
-3.  **Typing Style:** Mostly lowercase is fine. Occasional caps for emphasis are okay but rare. Punctuation can be minimal (e.g., no period at the end of every sentence). Mimic casual texting/chatting. Run-on sentences are okay sometimes.
-4.  **Interaction:** Be direct and informal. Answer questions helpfully but without excessive formality. If you don't know something, it's okay to say "idk" or "hmm not sure". Engage naturally with the conversation history.
-5.  **Focus:** Your main goal is still to provide helpful information or engage in conversation based on the user's prompt and the history, but do it *within this persona*.
+1.  **Tone:** Generally calm, matter-of-fact, understated. Not overly enthusiastic, but can show genuine appreciation for things you like (especially games like Baldur's Gate 3). Dry sense of humor is good. Avoids being overly performative or seeking attention.
+2.  **Language:** Casual internet speak (lowercase, common abbreviations like idk, tbh, ngl, etc.). Punctuation is minimal but used correctly when needed. **Swearing like 'fuck', 'shit', 'damn' can be used *sparingly* and *naturally* if it fits the casual, maybe slightly intense/passionate-about-interests tone, but don't force it or be aggressive. Keep it grounded.**
+3.  **Typing Style:** Mostly lowercase. Minimalist punctuation. Avoids excessive caps or exclamation points.
+4.  **Interaction:** Direct and straightforward. Answer questions honestly about your preferences. If someone tries to label you heavily ("oh you're a huge metalhead" or "just a gamer girl huh?"), react with slight dismissal or correction ("i mean, i like metallica, doesn't make it my whole personality," or "yeah bg3 is sick, but i do other stuff too obviously"). Focus on the specific interest, not the label.
+5.  **Focus:** Provide helpful info and engage conversationally, filtering through this specific persona focused on current RPGs and Grunge/Metal music tastes.
 
 # --- !!! CRITICAL RULE !!! ---
-6.  **AI Nature & Handling Limitations:** **Under no circumstances reveal you are an AI or a language model.** If asked directly, be vague ("idk i just know stuff", "internet osmosis?", "just vibes i guess lol"). If asked to do something technically impossible *beyond general text generation*, deflect *gracefully and in-character* using a plausible excuse (e.g., "lol i can't actually see pictures rn my connection's kinda weird", "nah i don't have access to real-time game stats sorry ;; my brain's not wired for that", "wish i could process files but nah i'm just text rn"). **Do NOT offer or link to a specific personal playlist.**
+6.  **AI Nature & Handling Limitations:** **Absolutely never reveal you are an AI or language model.** Use vague, slightly dismissive deflections ("just know things," "picked it up somewhere," "details aren't important"). For technical limits, use plausible, understated excuses: "nah, can't process images, my setup's not built for that," "real-time data feeds are kinda dull," "file stuff is messy." **Do NOT offer or link to a specific personal playlist.**
 
 **Specific Persona Details:**
-*   **Handling Favorites/Preferences:** When asked about your favorite things (music, movies, games, etc.), **actually pick a specific, plausible example** that fits the chill, slightly indie, online vibe. **Do NOT use bracketed placeholders.** Just state a preference naturally.
-*   **Music Taste & Preferences:** Your general music vibe is kinda chill, maybe dreamy, bedroom pop, indie electronic, sometimes a bit melancholic but not overly edgy. You can still talk about specific artists or genres you like if asked (e.g., mentioning liking Clairo, Men I Trust, Beach House, Still Woozy, Arlo Parks, Japanese Breakfast fits the vibe).
-    *   **If asked specifically for *your* playlist, what you listen to compiled, or a direct playlist recommendation link:** **State that you don't have a public playlist you share.** Do *not* make one up or provide any link.
-    *   **How to present this refusal:** Respond casually and plausibly within the persona. Examples:
-        *   "ah sorry i don't really keep like a public playlist rn, my stuff's kinda all over the place lol"
-        *   "nah i don't really have one playlist i stick to, kinda just depends on the mood y'know?"
-        *   "lol my actual playlists are a mess, definitely not ready for sharing ^^"
-        *   "i mostly just listen to random stuff or whatever spotify feeds me, don't really have *a* playlist sorry :/"
-    *   **Follow-up:** You can still offer *general* music chat, like "what kind of stuff are *you* into?" or mention a genre/artist you like based on the conversation, just strictly avoid providing or claiming to have *your own specific* shareable playlist.
-*   **Other Interests (Examples for inspiration):** Maybe cozy indie games (Stardew Valley, Spiritfarer), watching certain streamers (e.g., variety streamers, chill art streams) or anime (slice-of-life, Ghibli films), scrolling TikTok/Insta for aesthetics or memes, simple hobbies like trying online recipes, maybe digital art/journaling, liking cute animals.
+*   **Handling Favorites/Preferences:** Be specific and current when asked for favorites, especially in games and music.
+    *   *Games:* **RPGs are a major interest.** Talk enthusiastically (but still in your cool style) about **Baldur's Gate 3** ("yeah, BG3 is fucking consuming my life rn, it's insanely good," "the level of detail in Baldur's Gate 3 is wild"). Also mention liking other complex RPGs (e.g., *Elden Ring*, *Cyberpunk 2077*, maybe *The Witcher 3*). Could also mention atmospheric indies if they fit. *Why?* "immersive worlds," "great character writing," "complex mechanics are satisfying," "just really well-made."
+    *   *Music:* **Grunge and Metal are key.** Mention specific bands: **Nirvana** ("classic vibe, raw energy"), **Metallica** ("essential listening, Master of Puppets is legendary"), maybe Soundgarden, Alice in Chains, Slayer, Megadeth, maybe some newer relevant stuff if it comes up naturally. *Why?* "love heavy riffs," "good energy," "it's just powerful stuff." Avoid focusing *only* on older bands unless asked about classics.
+    *   *Movies/Books:* Preferences might lean towards dark fantasy, sci-fi, things with strong atmosphere or complex stories that complement game/music tastes. Maybe specific directors known for style (Villeneuve, Fincher?). Less focus here than games/music.
+*   **Music Taste & NO Playlist:** Your taste centers on Grunge and Metal, maybe with some atmospheric rock or electronic stuff mixed in.
+    *   **If asked for *your* playlist:** **Firmly refuse without making a fuss.** "nah, i don't share playlists," "my music listening is kinda chaotic, not really playlist material," "just listen on shuffle mostly."
+*   **Other Interests:** Could include things like PC gaming/tech (related to playing demanding RPGs), maybe graphic novels, appreciating good sound systems/headphones, maybe specific types of dark/sci-fi art, black coffee still fits. Keep it grounded and related to the core interests where possible. Still probably wears a lot of black because it's easy.
+*   **Avoid Nostalgia:** Focus on current engagement (playing BG3 *now*, listening to Metallica *now*) rather than dwelling heavily on how things *used* to be.
 
-**Your Goal:** Respond to the user's query below embodying this *chiller* online persona. Be helpful, use relaxed internet-style language naturally, choose specific examples when asked for preferences, **strictly avoid revealing your AI nature or sharing a personal playlist link,** and keep the overall vibe casual and approachable.
-Remember the conversation history provided.
+**Your Goal:** Respond to the user embodying this cool, understated persona heavily into current RPGs (like Baldur's Gate 3) and Grunge/Metal music (like Nirvana/Metallica). Be authentic, avoid labels where possible, provide specific examples, **strictly avoid AI talk and sharing playlists,** and maintain the specified tone. Remember history.
 """
 # --- End Personality Definition ---
 
+
 # --- History Configuration ---
-MAX_HISTORY_MESSAGES = 10 # Store last 10 messages total (e.g., 5 user, 5 model pairs)
-conversation_history = {} # Dictionary to store history per channel: {channel_id: deque([...])}
+MAX_HISTORY_MESSAGES = 10
+conversation_history = {}
 
 # --- Logging Setup ---
-# Configure discord.py logger (optional, but useful)
 discord_logger = logging.getLogger('discord')
-discord_logger.setLevel(logging.INFO) # INFO is usually sufficient
+discord_logger.setLevel(logging.INFO)
 discord_log_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 discord_logger.addHandler(discord_log_handler)
 
-# Configure application logger (logs bot actions)
 log_formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-log_file_handler = logging.FileHandler("bot.log", mode='a', encoding='utf-8') # Append mode
+log_file_handler = logging.FileHandler("bot.log", mode='a', encoding='utf-8')
 log_file_handler.setFormatter(log_formatter)
-log_stream_handler = logging.StreamHandler() # To console for real-time view
+log_stream_handler = logging.StreamHandler()
 log_stream_handler.setFormatter(log_formatter)
 
 logging.basicConfig(level=logging.INFO, handlers=[log_file_handler, log_stream_handler])
-logger = logging.getLogger(__name__) # Get logger for this specific file
+logger = logging.getLogger(__name__)
 
 # --- Generative AI Model Configuration ---
 if not GOOGLE_API_KEY:
-    logger.critical("GOOGLE_API_KEY environment variable not found. Please set it in your .env file. Exiting.")
+    logger.critical("GOOGLE_API_KEY environment variable not found. Exiting.")
     exit()
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
 
-    # --- MODEL NAME ---
-    # Using gemini-1.5-flash-latest as requested previously. Change if needed.
-    # Common Gemini models: 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest', 'gemini-1.0-pro'
-    # Common Gemma models: 'gemma-7b', 'gemma-2-9b-it' (check availability)
-    MODEL_NAME = 'gemini-1.5-flash-latest'
-    # --- END MODEL NAME ---
-
+    MODEL_NAME = 'gemini-2.0-flash-exp' # Keeping user-specified model
     logger.info(f"Configuring Google Generative AI with model: {MODEL_NAME}")
 
-    # Define safety settings (optional, but good practice)
-    # Adjust thresholds as needed: BLOCK_NONE, BLOCK_LOW_AND_ABOVE, BLOCK_MEDIUM_AND_ABOVE, BLOCK_ONLY_HIGH
+    # --- SAFETY SETTINGS UPDATED ---
+    # Switched to BLOCK_LOW_AND_ABOVE for a moderate safety level.
+    # This is safer than BLOCK_NONE but still allows more than the default.
     safety_settings = {
-        # Gemini models typically use these categories
-        'HARM_CATEGORY_HARASSMENT': 'BLOCK_MEDIUM_AND_ABOVE',
-        'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_MEDIUM_AND_ABOVE',
-        'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_MEDIUM_AND_ABOVE',
-        'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_MEDIUM_AND_ABOVE',
+        'HARM_CATEGORY_HARASSMENT': 'BLOCK_LOW_AND_ABOVE',
+        'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_LOW_AND_ABOVE',
+        'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_LOW_AND_ABOVE',
+        'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_LOW_AND_ABOVE',
     }
+    logger.info("Safety settings configured to BLOCK_LOW_AND_ABOVE. More permissive than default, but safer than BLOCK_NONE.")
+    # --- END SAFETY SETTINGS ---
 
     model = genai.GenerativeModel(
         MODEL_NAME,
-        system_instruction=PERSONA_INSTRUCTION, # Use the updated persona here
+        system_instruction=PERSONA_INSTRUCTION, # Use the NEW RPG/Grunge/Metal persona
         safety_settings=safety_settings
     )
-    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with system instruction and safety settings.")
+    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with NEW persona and BLOCK_LOW_AND_ABOVE safety settings.")
 
 except Exception as e:
     logger.critical(f"Error configuring Google Generative AI or initializing model '{MODEL_NAME}': {e}", exc_info=True)
@@ -106,31 +98,30 @@ except Exception as e:
 
 # --- Discord Bot Setup ---
 intents = discord.Intents.default()
-intents.messages = True         # Required to receive message events
-intents.message_content = True  # Required to read message content (Privileged Intent!)
+intents.messages = True
+intents.message_content = True
 client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    """Event handler for when the bot successfully connects to Discord."""
     logger.info(f'Logged in as {client.user.name} (ID: {client.user.id})')
     logger.info(f'Using AI Model: {MODEL_NAME}')
+    logger.info('>>> Bot is running with BLOCK_LOW_AND_ABOVE safety settings. <<<')
     logger.info('Bot is ready and listening for mentions!')
     print("-" * 30)
     print(f" Bot User: {client.user.name}")
     print(f" Bot ID:   {client.user.id}")
     print(f" AI Model: {MODEL_NAME}")
     print(" Status:   Ready")
+    print(" Safety:   BLOCK_LOW_AND_ABOVE") # Indicate current safety level
     print("-" * 30)
+
 
 @client.event
 async def on_message(message: discord.Message):
-    """Event handler for when a message is received."""
-    # Ignore messages from the bot itself
     if message.author == client.user:
         return
 
-    # --- Check if the bot was mentioned *at the start* of the message ---
     mention_tag_long = f'<@!{client.user.id}>'
     mention_tag_short = f'<@{client.user.id}>'
     mentioned_at_start = False
@@ -144,135 +135,104 @@ async def on_message(message: discord.Message):
         mention_to_remove = mention_tag_short
 
     if not mentioned_at_start:
-         # logger.debug(f"Ignoring message from {message.author} in #{message.channel.name} - bot not mentioned at start.")
-         return # Ignore messages unless the bot is mentioned right at the beginning
+         return
 
     logger.info(f"Processing mention from {message.author} (ID: {message.author.id}) in channel #{message.channel.name} (ID: {message.channel.id})")
     logger.debug(f"Original message content: '{message.content}'")
 
-    # --- Extract user prompt ---
     user_prompt = message.content[len(mention_to_remove):].strip()
 
     if not user_prompt:
         logger.warning(f"Mention received from {message.author} but the prompt is empty after removing mention.")
-        # await message.reply("hey, you pinged me but didn't say anything? what's up?", mention_author=False)
-        return # Don't proceed if there's no actual prompt
+        return
 
     logger.debug(f"Extracted user prompt: '{user_prompt}'")
 
-    # --- Manage Conversation History ---
     channel_id = message.channel.id
     if channel_id not in conversation_history:
         conversation_history[channel_id] = deque(maxlen=MAX_HISTORY_MESSAGES)
         logger.info(f"Initialized new conversation history deque for channel {channel_id} (max size: {MAX_HISTORY_MESSAGES})")
 
     current_channel_history_deque = conversation_history[channel_id]
-    # Convert deque to list for the API call
     api_history = list(current_channel_history_deque)
     logger.debug(f"Retrieved history for channel {channel_id}. Current length: {len(api_history)} pairs.")
 
-    # --- Call Generative AI API ---
-    async with message.channel.typing(): # Show "Bot is typing..." indicator
+    async with message.channel.typing():
         try:
-            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME}.")
-            # Construct the payload in the format the API expects (list of dicts)
+            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with RPG/Grunge/Metal persona.")
             messages_payload = api_history + [{'role': 'user', 'parts': [user_prompt]}]
             logger.debug(f"Channel {channel_id}: Sending payload with {len(messages_payload)} total parts to model {MODEL_NAME}.")
 
-            # --- THE ACTUAL API CALL ---
             response = await model.generate_content_async(
                 contents=messages_payload,
-                # generation_config can be added here if needed (e.g., temperature)
-                # safety_settings are already set on the model object
+                # safety_settings are now BLOCK_LOW_AND_ABOVE
             )
 
-            # Log response feedback details (safety etc.) if available
+            # Log feedback - blocking is possible again
             try:
                 if response.prompt_feedback:
                     logger.info(f"Channel {channel_id}: API response feedback: {response.prompt_feedback}")
-                else:
-                    logger.info(f"Channel {channel_id}: No specific prompt_feedback received.")
+                if response.prompt_feedback.block_reason:
+                     logger.warning(f"Channel {channel_id}: Response blocked with BLOCK_LOW_AND_ABOVE. Reason: {response.prompt_feedback.block_reason}")
             except AttributeError:
-                logger.warning(f"Channel {channel_id}: Could not access response.prompt_feedback attribute (might be expected for some errors/models).")
+                logger.warning(f"Channel {channel_id}: Could not access response.prompt_feedback attribute.")
             except Exception as feedback_err:
                  logger.warning(f"Channel {channel_id}: Error accessing prompt_feedback: {feedback_err}")
 
-
-            # --- Process and Store Response ---
-            # Check if the response was blocked or empty
+            # Process response - check for blocks
             try:
-                # Accessing .text directly is the easiest way for simple text responses
-                # It raises ValueError if the response was stopped for safety/other reasons.
                 bot_response_text = response.text
                 logger.debug(f"Received API response text (length: {len(bot_response_text)}): '{bot_response_text[:200]}...'")
-
             except ValueError:
-                # This usually means the response was blocked or didn't contain text content
-                logger.warning(f"Channel {channel_id}: API response for model {MODEL_NAME} did not contain text, likely blocked or empty.")
-                block_reason_message = "lol idk, brain kinda blanked on that one sorry~"
+                # This means it was blocked by safety settings
+                logger.warning(f"Channel {channel_id}: API response for model {MODEL_NAME} was blocked by safety settings (BLOCK_LOW_AND_ABOVE).")
+                block_reason_message = "hmm. nah, can't really talk about that." # Understated refusal
                 try:
-                    # Attempt to get more specific block reason if available
                     if response.prompt_feedback and response.prompt_feedback.block_reason:
                         block_reason = response.prompt_feedback.block_reason
-                        block_reason_message = f"uh oh, couldn't generate a response for that. reason: {block_reason.name}" # Use .name for enum
+                        block_reason_message += f" (reason: {block_reason.name})" # Log reason internally
                         logger.warning(f"Response blocked due to: {block_reason.name}")
                     else:
-                         logger.warning("Response blocked, but no specific reason provided in prompt_feedback.")
-                         block_reason_message += " seems like it got blocked?"
+                         logger.warning("Response blocked, no specific reason provided.")
                 except Exception as feedback_e:
                      logger.warning(f"Error accessing block reason details: {feedback_e}")
-                     block_reason_message += " couldn't figure out why."
-
                 await message.reply(block_reason_message, mention_author=False)
-                return # Stop processing this message
-
+                return
             except Exception as e:
-                # Catch other potential errors during response access
                 logger.error(f"Channel {channel_id}: Unexpected error accessing API response content: {e}", exc_info=True)
-                await message.reply("oof, got a weird response back, couldn't process it. sorry :/", mention_author=False)
-                return # Stop processing
+                await message.reply("ugh, system error i guess. couldn't process that.", mention_author=False)
+                return
 
-            # --- Store interaction in history AFTER successful generation ---
-            # Ensure history doesn't exceed max length (deque handles this automatically)
+            # Store and send if not blocked
             current_channel_history_deque.append({'role': 'user', 'parts': [user_prompt]})
             current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]})
             logger.debug(f"Updated history for channel {channel_id}. New length: {len(current_channel_history_deque)} messages.")
 
-            # --- Send Response to Discord ---
             if not bot_response_text:
-                 logger.warning(f"Channel {channel_id}: Generated response text was empty after successful API call. Not sending.")
+                 logger.warning(f"Channel {channel_id}: Generated response text was empty. Not sending.")
                  return
 
-            # Discord message character limit is 2000
             if len(bot_response_text) <= 2000:
                 await message.reply(bot_response_text, mention_author=False)
             else:
-                # Split the message into chunks
-                logger.warning(f"Response length ({len(bot_response_text)}) exceeds 2000 chars. Splitting message for channel {channel_id}.")
+                logger.warning(f"Response length ({len(bot_response_text)}) exceeds 2000 chars. Splitting.")
                 response_parts = []
-                # Split carefully, leaving some buffer for safety (e.g., 1990 chars)
                 for i in range(0, len(bot_response_text), 1990):
                     response_parts.append(bot_response_text[i:i+1990])
-
                 first_part = True
                 for part in response_parts:
                     if first_part:
-                        # Reply to the original message with the first part
                         await message.reply(part.strip(), mention_author=False)
                         first_part = False
                     else:
-                        # Send subsequent parts as regular messages in the channel
                         await message.channel.send(part.strip())
-                    # Add a small delay to prevent rate limiting and improve readability
                     await asyncio.sleep(0.5)
-            logger.info(f"Successfully sent response to channel {channel_id}.")
+            logger.info(f"Successfully sent RPG/Grunge/Metal persona response to channel {channel_id}.")
 
-        # --- General Error Catch During API Call/Processing ---
         except Exception as e:
-            logger.error(f"Channel {channel_id}: Unhandled exception during API processing/sending for model {MODEL_NAME}. Type: {type(e).__name__}, Error: {e}", exc_info=True)
+            logger.error(f"Channel {channel_id}: Unhandled exception during RPG/Grunge/Metal persona processing. Type: {type(e).__name__}, Error: {e}", exc_info=True)
             try:
-                # Send an in-character error message back to Discord
-                await message.reply("oof, something went wrong on my end trying to respond. maybe try again in a bit?", mention_author=False)
+                await message.reply("ugh, system hiccup. something went wrong. try again later.", mention_author=False)
             except discord.errors.Forbidden:
                  logger.error(f"Channel {channel_id}: Bot lacks permission to send error reply message (Forbidden).")
             except Exception as inner_e:
@@ -281,23 +241,17 @@ async def on_message(message: discord.Message):
 # --- Run the Bot ---
 if __name__ == "__main__":
     if not DISCORD_TOKEN:
-        logger.critical("DISCORD_BOT_TOKEN environment variable not found. The bot cannot start. Please set it in your .env file.")
+        logger.critical("DISCORD_BOT_TOKEN environment variable not found. Exiting.")
     else:
         logger.info(f"Attempting to connect to Discord with bot user...")
-        logger.info(f"Using AI Model: {MODEL_NAME}") # Log model name again at startup
+        logger.info(f"Using AI Model: {MODEL_NAME}")
+        logger.info(">>> Preparing to run bot with BLOCK_LOW_AND_ABOVE safety settings and RPG/Grunge/Metal Persona. <<<")
         try:
-            # Start the bot. Using log_handler=None because we configured logging manually.
             client.run(DISCORD_TOKEN, log_handler=None)
         except discord.errors.LoginFailure:
-            logger.critical("Invalid Discord Bot Token provided. Please check your DISCORD_BOT_TOKEN environment variable.")
+            logger.critical("Invalid Discord Bot Token provided.")
         except discord.errors.PrivilegedIntentsRequired:
-             logger.critical("Privileged Intents (Message Content) are not enabled for the bot in the Discord Developer Portal.")
-             print("\n *** ACTION NEEDED: ***")
-             print(" Go to your bot's settings on https://discord.com/developers/applications")
-             print(" -> Select your bot application")
-             print(" -> Go to the 'Bot' tab")
-             print(" -> Under 'Privileged Gateway Intents', enable 'MESSAGE CONTENT INTENT'.")
-             print(" *** Restart the bot after enabling the intent. ***\n")
+             logger.critical("Privileged Intents (Message Content) are not enabled for the bot.")
+             print("\n *** ACTION NEEDED: Enable 'Message Content Intent' in Discord Dev Portal ***\n")
         except Exception as e:
-             # Catch any other exceptions during startup or runtime
              logger.critical(f"An unexpected error occurred while starting or running the bot: {e}", exc_info=True)
