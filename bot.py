@@ -8,10 +8,14 @@ import logging
 from collections import deque
 import asyncio
 
+from keep_alive import keep_alive
+
 # --- Configuration ---
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+keep_alive()
 
 # --- !!! PERSONALITY GOES HERE (as System Instruction) !!! ---
 # NEW PERSONA: Understated Cool - RPGs, Grunge, Metal focus
