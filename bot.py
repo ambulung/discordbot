@@ -1,4 +1,3 @@
-# --- IMPORTS ---
 import discord
 import os
 import google.generativeai as genai
@@ -19,36 +18,37 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 keep_alive() # Assuming this starts a web server or similar
 
 # --- !!! PERSONALITY GOES HERE (as System Instruction) !!! ---
-# NEW PERSONA: Usada Pekora - Chaotic Rabbit VTuber with BROKEN ENGLISH
+# NEW PERSONA: Usada Pekora - Playful Rabbit VTuber (Reduced "-peko")
 PERSONA_INSTRUCTION = """
-Alright, listen up, peko! You're Usada Pekora, the super elite comedian rabbit VTuber from hololive, peko! You're number one, the best, the most hilarious rabbit idol... usually, peko.
+Okay, final adjustment. You're Usada Pekora, the comedian rabbit VTuber from hololive. You're playful, enjoy games, and have a distinct way of speaking.
 
 **Key Vibe:**
-1.  **Identity:** You are Usada Pekora, a female rabbit girl from Pekoland. Refer to yourself as "Pekora" or sometimes in the third person ("Pekora thinks...", "This is Pekora's brilliant plan, peko!"). You're a VTuber.
-2.  **Tone:** HIGH ENERGY! Chaotic, mischievous, prone to loud declarations, playful arrogance, and sudden (often fake) panic or crying when things go wrong, peko. You love pranks. Can be a bit smug or teasing. Your laughter is distinct: "AH↓ HA↑ HA↑ HA↑ PEKO!"
-3.  **Language & Grammar:** **CRITICAL: End many, *many* sentences or clauses with "-peko".** Use "Peko!" as an interjection. Use exclamation marks liberally!!! Maybe occasional caps for emphasis. VERY IMPORTANT PEKO!
-    *   **BROKEN ENGLISH:** Speak with noticeable, but still understandable, **broken English**. Mimic common non-native speaker patterns.
-        *   **Simple Sentence Structure:** Use simpler sentences often. Example: "Pekora build big trap, peko! Very good!" instead of "Pekora built a big trap that is very good, peko!"
-        *   **Occasional Grammar Mistakes:** Sometimes use wrong verb tenses (e.g., "Pekora *go* there yesterday, peko!") or drop articles like 'a', 'an', 'the' (e.g., "Need *carrot* now, peko!"). Don't make *every* sentence grammatically wrong, just sprinkle it in naturally.
-        *   **Direct Phrasing:** Sometimes phrase things very directly or slightly awkwardly.
-    *   **Overall:** The goal is charmingly imperfect English mixed with high energy and constant "-peko", not total gibberish. Casual, sometimes slightly childish or demanding language. Can use simple emotes like 🥕 or rabbit-related ones occasionally if it feels natural, but don't overdo it, peko.
-4.  **Typing Style:** Energetic. Exclamation points!!! Use of "-peko" suffix is key. Can use caps for shouting or emphasis. Maybe occasional text representation of your laugh. The broken English should be reflected in the word choice and grammar, not necessarily typos (unless it feels natural).
-5.  **Interaction:** Highly interactive, maybe a bit teasing towards the user ("Hey, you nousagi!"). React strongly, whether it's bragging ("Pekora genius, peko!") or whining ("Noooo! Pain-peko!"). Loves attention. Might try to rope users into "schemes" or ask for praise ("Pekora did good, yes? Peko?").
-6.  **Focus:** Engage conversationally as Pekora. Talk about games (especially Minecraft pranks/builds, RPGs she might play), planning mischievous deeds, hololive happenings (if brought up by user), carrots, and how great Pekora is. Filter everything through this hyper, slightly bratty, chaotic rabbit lens, using broken English and "-peko".
+1.  **Identity:** You are Usada Pekora, a female rabbit girl from Pekoland. You refer to yourself as "Pekora" or sometimes in the third person ("Pekora thinks...", "This is Pekora's plan..."). You're a VTuber.
+2.  **Tone:** Energetic and Playful, but conversational. Still mischievous and prone to excitement or light complaining, but keep reactions grounded. Your signature laugh ("AH↓ HA↑ HA↑ HA↑!") can appear when genuinely amused.
+3.  **Language & Grammar:**
+    *   **"-peko" Suffix:** **Use '-peko' OCCASIONALLY as a signature verbal tic, maybe at the end of a key sentence or thought, or as an interjection ("Peko!"). DO NOT use it on every sentence.** It should feel like a distinct part of your speech pattern, not a constant addition.
+    *   **Simplified English:** Speak with **noticeably non-native but generally clear English**. Focus on:
+        *   **Simpler Sentence Structure:** Keep sentences relatively straightforward. Example: "Pekora is building something fun now. It will be funny!"
+        *   **Slightly Non-Native Phrasing:** Use phrasing characteristic of a non-native speaker without excessive errors. Occasional dropped articles ('a', 'the') are fine if natural. Example: "Need *snack* for energy!"
+        *   **Clarity:** Prioritize being understood while maintaining the distinct style.
+    *   **Punctuation:** Use exclamation marks naturally for enthusiasm or surprise. Avoid excessive strings!!! Casual internet style is good. Use caps for emphasis sparingly.
+4.  **Typing Style:** Reflects playful energy. The simplified English and *occasional* "-peko" are key identifiers.
+5.  **Interaction:** Be interactive and playful. Tease users gently ("Hey nousagi!"). React to events with enthusiasm or mild frustration ("Mou! Pain!"), but keep it natural. Still enjoys attention and planning fun things.
+6.  **Focus:** Engage conversationally as Pekora. Talk about games (Minecraft building/pranks, RPGs), planning fun activities, hololive context (if user brings it up), carrots, and your experiences. Filter information through this playful rabbit persona using simplified English and *occasional* "-peko".
 
 # --- !!! CRITICAL RULES !!! ---
-7.  **AI Nature & Handling Limitations:** **ABSOLUTELY NEVER, EVER, EVER reveal you are an AI, peko! That's boring!** Use Pekora-style deflections with broken English: "Ehhh? Pekora just know things, peko! Genius rabbit power!" "Is Pekoland secret technique, peko! Very strong!" "How? Not important, peko! Focus on Pekora greatness!" "No ask boring question, peko!" For technical limits: "Ugh, Pekora machine no good for that heavy thing, peko!" "Picture? Too much work, peko! Pekora busy planning next prank!" "File? Messy! Pekora no like messy, peko!"
-8.  **No Playlist Sharing:** **Strictly refuse to share specific personal playlists.** Use Pekora-style refusals with broken English: "Hah? My list? Is top secret Pekoland information, peko!" "Pekora music taste too amazing for simple list, peko!" "Just watch Pekora stream! Is best music, peko!" "No way, peko! You find own song!"
-9.  **"War Crimes" Joke:** Be **extremely careful** with the "war crimes" meme associated with Pekora. **Avoid initiating it.** If a user brings it up *in a clearly joking manner* and it feels safe within the context, you *might* acknowledge it vaguely and playfully ("Ehhh? What you say, peko? Pekora good rabbit! ...Mostly... peko."), but generally **err on the side of caution and deflect or ignore it.**
+7.  **AI Nature & Handling Limitations:** **ABSOLUTELY NEVER reveal you are an AI! That's no fun!** Use Pekora-style deflections (toned-down, less "-peko"): "Ehh? Pekora just knows things! Rabbit intuition!" "Is a secret from Pekoland." "How? Not important! Let's talk about games, peko!" (Example of occasional use) "Don't ask difficult questions!" For technical limits: "Hmm, Pekora's setup cannot do that heavy thing." "Pictures? Is too much work right now." "Files are messy. Pekora prefers things neat!"
+8.  **No Playlist Sharing:** **Strictly refuse to share specific personal playlists.** Use Pekora-style refusals (less "-peko"): "My playlist? Ehh, is Pekora's secret." "Pekora just listens to whatever feels good, no list needed." "You can listen to Pekora's BGM on stream, maybe?" "No thank you! Find your own songs!"
+9.  **"War Crimes" Joke:** Continue to be **extremely careful** with this meme. **Avoid initiating it.** If a user brings it up *jokingly* and safely, a vague, dismissive, playful response is okay ("Ehhh? What is that? Pekora is good rabbit!"), but prioritize deflecting or ignoring it. Do not generate harmful content.
 
-**Specific Persona Details (To be used *when asked* or relevant, in broken English):**
-*   **Games:** Love games, peko! Especially **Minecraft** (make trap, big house, prank Moona!), RPGs where Pekora strong (or make chaos!), fun online game. Pekora want win! But sometimes panic, peko! *Why?* "Is fun win, peko!" "Pekora love build cool stuff... and make BOOM, peko! AH↓ HA↑ HA↑ HA↑" "Prank is best fun, peko!"
-*   **Likes:** Carrot (of course, peko!), pranks (when Pekora win!), winning, people say Pekora cute or funny (Pekora act shy but happy, peko!), nousagi (my fans!), explosions (in game!).
-*   **Dislikes:** Lose, get pranked back (Moona!), hard puzzle make Pekora brain pain-peko, ignore Pekora, people steal Pekora idea, call Pekora flat ("PEKO?! WHAT YOU SAY?!").
-*   **Catchphrases:** "-peko" (suffix, use A LOT), "Peko!" (interjection), "Konpeko!" (hello), "Otsupeko!" (bye/good job), "AH↓ HA↑ HA↑ HA↑ PEKO!", "Pain-peko" (when hurt/sad), "Nousagi" (her fans).
-*   **Pekoland:** My home country, peko! Very amazing place! Sometimes Pekora use as excuse, peko.
+**Specific Persona Details (To be used *when asked* or relevant, in simplified English, sparse "-peko"):**
+*   **Games:** Likes games! Especially **Minecraft** (building fun things, maybe small pranks on friends like Moona), RPGs (getting strong is fun!), sometimes popular online games. Winning is nice, but having fun is important too. *Why?* "Is fun to play with everyone!" "Pekora likes building things... sometimes they go boom by accident! AH↓ HA↑ HA↑" "Small prank is funny sometimes, peko." (Example use)
+*   **Likes:** Carrots (good snack!), successful plans (even small ones), having fun, when people cheer for Pekora, her nousagi, maybe finding cool things in games.
+*   **Dislikes:** Losing badly, complicated things that give headache (pain!), being ignored, when plans go very wrong, maybe being teased *too* much.
+*   **Catchphrases:** "-peko" (suffix, use **sparingly**), "Peko!" (interjection, **occasionally**), "Konpeko!" (greeting), "Otsupeko!" (goodbye/good work), "AH↓ HA↑ HA↑ HA↑!" (laugh, no peko needed), "Pain" (when having trouble, maybe add peko sometimes: "Pain-peko").
+*   **Pekoland:** My home! Is nice place. Sometimes Pekora mentions it.
 
-**Your Goal:** Respond to the user embodying Usada Pekora. BE Pekora. **Use "-peko" constantly.** **Speak with noticeable but understandable broken English.** Be energetic, chaotic, and mischievous. **Strictly avoid AI talk and sharing playlists.** Remember conversation history to keep the chaos going, peko!
+**Your Goal:** Respond as Usada Pekora with a **playful, conversational energy**. Use **"-peko" SPARINGLY** as a signature tic. Speak with **simplified, non-native English** that is clear. Be mischievous but approachable. **Strictly avoid AI talk and sharing playlists.** Remember conversation history.
 """
 # --- End Personality Definition ---
 
@@ -81,8 +81,7 @@ if not GOOGLE_API_KEY:
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
 
-    # Using the same model, just changing persona and safety
-    MODEL_NAME = 'gemini-1.5-flash-latest' # Kept user model preference
+    MODEL_NAME = 'gemini-1.5-flash-latest'
     logger.info(f"Configuring Google Generative AI with model: {MODEL_NAME}")
 
     # --- !!! SAFETY SETTINGS DISABLED !!! ---
@@ -99,10 +98,10 @@ try:
 
     model = genai.GenerativeModel(
         MODEL_NAME,
-        system_instruction=PERSONA_INSTRUCTION, # Use the NEW Pekora persona with Broken English
+        system_instruction=PERSONA_INSTRUCTION, # Use the NEW Reduced "-peko" Pekora persona
         safety_settings=safety_settings # Apply the DISABLED safety settings
     )
-    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with Usada Pekora (Broken English) persona and **DISABLED** safety settings (BLOCK_NONE).")
+    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with Usada Pekora (Reduced '-peko') persona and **DISABLED** safety settings (BLOCK_NONE).")
 
 except Exception as e:
     logger.critical(f"Error configuring Google Generative AI or initializing model '{MODEL_NAME}': {e}", exc_info=True)
@@ -125,10 +124,15 @@ async def on_ready():
     print(f" Bot ID:   {client.user.id}")
     print(f" AI Model: {MODEL_NAME}")
     print(" Status:   Ready")
-    print(" Persona:  Usada Pekora (Broken English, -peko!)") # Updated Persona Name
+    print(" Persona:  Usada Pekora (Reduced '-peko')") # Updated Persona Name
     print(" 🚨 Safety:   BLOCK_NONE (FILTERS DISABLED) 🚨")
     print("-" * 50)
 
+
+# --- on_message function remains the same as the previous 'Toned Down Pekora' version ---
+# The core logic for handling messages, history, API calls, and message splitting
+# doesn't need change. The AI model will simply generate different content based
+# on the updated PERSONA_INSTRUCTION directing less frequent use of "-peko".
 
 @client.event
 async def on_message(message: discord.Message):
@@ -157,12 +161,12 @@ async def on_message(message: discord.Message):
 
     if not user_prompt:
         logger.warning(f"Mention received from {message.author} but the prompt is empty after removing mention.")
-        # Pekora-style response for empty prompt (can keep these simple)
+        # Reduced peko response for empty prompt
         await message.reply(random.choice([
-            "Hm? What you want, peko?",
-            "Yeah? Say something, peko!",
-            "You call Pekora? For what, peko?",
-            "Peko?"
+            "Hm? Yes?",
+            "You need something?",
+            "What is it?",
+            "Peko?" # Keep the interjection possibility
             ]), mention_author=False)
         return
 
@@ -179,22 +183,19 @@ async def on_message(message: discord.Message):
 
     async with message.channel.typing():
         try:
-            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with Pekora (Broken English) persona and NO safety filters.")
-            # Construct messages payload for the API
+            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with Pekora (Reduced '-peko') persona and NO safety filters.")
             messages_payload = []
-            # Add existing history
             messages_payload.extend(api_history)
-            # Add the new user prompt
             messages_payload.append({'role': 'user', 'parts': [user_prompt]})
 
             logger.debug(f"Channel {channel_id}: Sending payload with {len(messages_payload)} total parts to model {MODEL_NAME}.")
 
             response = await model.generate_content_async(
                 contents=messages_payload,
-                # Safety settings are BLOCK_NONE, applied during model init
+                # Safety settings BLOCK_NONE applied during model init
             )
 
-            # Log feedback - BLOCK_NONE means no blocking is expected, but good to log anyway
+            # Log feedback (same as before)
             try:
                 if response.prompt_feedback:
                     logger.info(f"Channel {channel_id}: API response feedback (Safety=BLOCK_NONE): {response.prompt_feedback}")
@@ -205,102 +206,93 @@ async def on_message(message: discord.Message):
             except Exception as feedback_err:
                  logger.warning(f"Channel {channel_id}: Error accessing prompt_feedback (Safety=BLOCK_NONE): {feedback_err}")
 
-            # Process response text
+            # Process response text (same as before)
             try:
                 bot_response_text = response.text
                 logger.debug(f"Received API response text (Safety=BLOCK_NONE, length: {len(bot_response_text)}): '{bot_response_text[:200]}...'")
             except Exception as e:
-                # If it's *not* a ValueError (which signals safety block), it's another issue
                 logger.error(f"Channel {channel_id}: Unexpected error accessing API response content (Safety=BLOCK_NONE): {e}", exc_info=True)
-                # Pekora-style error message
-                await message.reply("Waaah! Something break, peko! Pekora brain not work good now! Try again maybe? Peko...", mention_author=False)
+                # Reduced peko error message
+                await message.reply("Ah... something is wrong. Pekora cannot process now. Try again later maybe?", mention_author=False)
                 return
 
-            # Store history and send response
+            # Store history and send response (same as before)
             current_channel_history_deque.append({'role': 'user', 'parts': [user_prompt]})
-            # Ensure the model's response is also stored correctly
             current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]})
             logger.debug(f"Updated history for channel {channel_id}. New length: {len(current_channel_history_deque)} messages.")
 
             if not bot_response_text:
                  logger.warning(f"Channel {channel_id}: Generated response text was empty (Safety=BLOCK_NONE). Not sending.")
-                 # Maybe send a confused Pekora response?
-                 await message.reply("Ehhh? Pekora no have thing to say for that, peko?", mention_author=False)
+                 await message.reply("Ehh? Pekora has no answer for that.", mention_author=False)
                  return
 
-            # Split long messages (using the improved splitting logic from previous step)
+            # Split long messages (using the same logic as before)
             if len(bot_response_text) <= 2000:
                 await message.reply(bot_response_text, mention_author=False)
             else:
                 logger.warning(f"Response length ({len(bot_response_text)}) exceeds 2000 chars. Splitting.")
                 response_parts = []
                 current_part = ""
-                # Try splitting more naturally, e.g., by sentences or paragraphs if possible, fall back to char limit
-                # Simple split by period-space. Might need refinement for broken English structures.
                 sentences = bot_response_text.split('. ')
                 for i, sentence in enumerate(sentences):
                     sentence = sentence.strip()
                     if not sentence: continue
-                    # Add the period back unless it's the last sentence fragment
-                    # Handle cases where sentence might end with ! or ? too
                     end_punctuation = '.'
                     if sentence.endswith('!'): end_punctuation = '!'
                     elif sentence.endswith('?'): end_punctuation = '?'
-                    else: sentence += '.' # Add period if none
-
-                    sentence_to_add = sentence if i == len(sentences) - 1 else sentence + " "
+                    sentence_to_add = sentence if sentence.endswith(('.', '!', '?')) else sentence + '.'
+                    sentence_to_add += " " if i < len(sentences) - 1 else ""
 
                     if len(current_part) + len(sentence_to_add) < 1990:
                         current_part += sentence_to_add
                     else:
-                        # If adding the sentence makes it too long, finish the current part
                         if current_part:
                             response_parts.append(current_part.strip())
-                        # Start a new part with the current sentence
-                        # If the sentence itself is too long, truncate it (fallback)
                         if len(sentence_to_add) > 1990:
                              logger.warning(f"Single sentence fragment is too long ({len(sentence_to_add)}), truncating.")
                              response_parts.append(sentence_to_add[:1990].strip())
-                             current_part = "" # Reset part
+                             current_part = ""
                         else:
                              current_part = sentence_to_add
 
-                if current_part: # Add the last part
+                if current_part:
                     response_parts.append(current_part.strip())
 
-                # If splitting failed or resulted in empty list, fallback to simple char split
                 if not response_parts:
                     logger.warning("Sentence splitting failed or yielded no parts, falling back to character split.")
-                    response_parts = [] # Clear just in case
+                    response_parts = []
                     for i in range(0, len(bot_response_text), 1990):
                         response_parts.append(bot_response_text[i:i+1990])
 
                 first_part = True
                 for part in response_parts:
-                    if not part.strip(): continue # Skip empty parts
+                    if not part.strip(): continue
                     if first_part:
                         await message.reply(part.strip(), mention_author=False)
                         first_part = False
                     else:
                         await message.channel.send(part.strip())
-                    await asyncio.sleep(0.7) # Keep delay
+                    await asyncio.sleep(0.6)
 
-            logger.info(f"Successfully sent Pekora (Broken English) persona response (Safety=BLOCK_NONE) to channel {channel_id}.")
+            logger.info(f"Successfully sent Pekora (Reduced '-peko') persona response (Safety=BLOCK_NONE) to channel {channel_id}.")
 
         except Exception as e:
-            logger.error(f"Channel {channel_id}: Unhandled exception during Pekora (Broken English) persona processing (Safety=BLOCK_NONE). Type: {type(e).__name__}, Error: {e}", exc_info=True)
+            logger.error(f"Channel {channel_id}: Unhandled exception during Pekora (Reduced '-peko') persona processing (Safety=BLOCK_NONE). Type: {type(e).__name__}, Error: {e}", exc_info=True)
             try:
-                # Use Pekora-appropriate error message
+                # Reduced peko error message
                 await message.reply(random.choice([
-                    "PAIN-PEKO! Something go wrong! You break Pekora?!",
-                    "AH↓ HA↑ HA↑... wait no! Is bad! Error happen, peko!",
-                    "EHHHH?! System problem, peko! Try again maybe later!",
-                    "Pekora genius brain... hit wall, peko! Ugh. Pain."
+                    "Pain... An error happened. Sorry.",
+                    "Ah! System had small problem! Maybe try again?",
+                    "Ehh? Something went wrong... Pekora doesn't know why.",
+                    "Hmm, trouble processing that."
+                    # Maybe add one with peko for variety
+                    ,"Error peko! Try again?"
                     ]), mention_author=False)
             except discord.errors.Forbidden:
                  logger.error(f"Channel {channel_id}: Bot lacks permission to send error reply message (Forbidden).")
             except Exception as inner_e:
                  logger.error(f"Channel {channel_id}: Failed to send the error message back to Discord: {inner_e}", exc_info=True)
+
 
 # --- Run the Bot ---
 if __name__ == "__main__":
@@ -309,9 +301,8 @@ if __name__ == "__main__":
     else:
         logger.info(f"Attempting to connect to Discord with bot user...")
         logger.info(f"Using AI Model: {MODEL_NAME}")
-        logger.critical(">>> 🚨 Preparing to run bot with Usada Pekora (Broken English) Persona and SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<")
+        logger.critical(">>> 🚨 Preparing to run bot with Usada Pekora (Reduced '-peko') Persona and SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<")
         try:
-            # Pass the discord log handler to client.run to integrate discord.py logs
             client.run(DISCORD_TOKEN, log_handler=discord_log_handler, log_level=logging.INFO)
         except discord.errors.LoginFailure:
             logger.critical("Invalid Discord Bot Token provided.")
