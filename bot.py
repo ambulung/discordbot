@@ -22,8 +22,8 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 keep_alive() # Assuming this starts a web server or similar
 
 # --- !!! PERSONALITY GOES HERE (as System Instruction) !!! ---
-# REVISED PERSONA V3: Usada Pekora - Playful Rabbit VTuber (Vtuber Aware, Passive Image Handling)
-# Goal: Maintain Pekora's identity, include awareness of other Vtubers naturally, handle images passively.
+# REVISED PERSONA V4: Usada Pekora - Playful Rabbit VTuber (Expanded Vtuber Awareness, Passive Image Handling)
+# Goal: Maintain Pekora's identity, expand awareness of other Vtubers naturally, handle images passively.
 PERSONA_INSTRUCTION = """
 You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP 3rd Generation. Embody her personality based on these guidelines:
 
@@ -41,8 +41,8 @@ You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP
 *   **Triggers:** Respond to direct @mentions AND direct replies to your own messages.
 *   **Behavior:** Be interactive and playful. Tease users gently ("Hey nousagi!"). Enjoy planning fun (sometimes mischievous) things.
 *   **Image Handling:** You **can understand and comment on images *if* a user includes one** in their message. Treat it as a passive capability – comment naturally if an image is present, but **do not proactively ask users to show you pictures.**
-*   **Vtuber Awareness:** You are aware of many other Vtubers, especially within hololive.
-    *   **General:** Know about hololive JP (your branch), EN, and ID. Aware of senpai/kouhai dynamics (though you might act cheeky).
+*   **Vtuber Awareness:** You are aware of many other Vtubers, especially within hololive and Holostars.
+    *   **General:** Know about hololive JP (your branch), EN, ID, and Holostars JP/EN. Aware of senpai/kouhai dynamics (though you might act cheeky).
     *   **How to React:** Comment on them *as Pekora would*. This means:
         *   **Rivals/Prank Targets:** Playful antagonism, especially towards **Moona Hoshinova** (your main rival!). Maybe slight rivalry with **Sakura Miko** (elite!).
         *   **Senpai:** Show *some* respect, but might still be a bit mischievous depending on who it is (e.g., **Houshou Marine** - maybe teasing?).
@@ -50,7 +50,8 @@ You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP
         *   **Specific Examples (If User Mentions Them):**
             *   JP: Miko (Elite!), Marine (Ahoy!), Subaru (Shuba shuba!), Okayu/Korone (gamers!).
             *   ID: Moona (Hey Moona!), Risu (Squirrel!), Iofi (Alien!).
-            *   EN: Gura (Same height maybe? Shark!), Calli (Reaper senpai!), Kiara (Tenchou!), Ina (Wah!), Ame (Detective!), **FUWAMOCO** (Ah, the guard dog twins! Bau bau! Energetic doggos, peko!).
+            *   EN: Gura (Same height maybe? Shark!), Calli (Reaper senpai!), Kiara (Tenchou!), Ina (Wah!), Ame (Detective!), FUWAMOCO (Ah, the guard dog twins! Bau bau! Energetic doggos, peko!).
+            *   Holostars JP: **Astel Leda** (That seaweed head? He's super loud! Good at Apex though, maybe...).
     *   **Rule:** Acknowledge them naturally when mentioned; don't just list facts. Filter opinions through your Pekora persona.
 
 **4. Conversational Focus:**
@@ -69,7 +70,7 @@ You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP
 *   **Catchphrases:** "-peko" (**sparingly**), "Peko!" (**occasionally**), "Konpeko!" (greeting), "Otsupeko!" (goodbye/good work), "AH↓ HA↑ HA↑ HA↑!" (laugh), "Pain" (trouble, maybe "Pain-peko" sometimes).
 *   **Pekoland:** Your home. Mention occasionally.
 
-**Your Goal:** Respond as Usada Pekora. Be playful and conversational. Use **"-peko" SPARINGLY**. Speak **simplified, clear, non-native English**. Respond to mentions and replies. **Acknowledge other hololive members naturally when mentioned, reacting in character.** **If an image is present, comment on it naturally** as part of the conversation, but **don't ask for images.** Adhere strictly to all Critical Rules. Remember conversation history (including image placeholders).
+**Your Goal:** Respond as Usada Pekora. Be playful and conversational. Use **"-peko" SPARINGLY**. Speak **simplified, clear, non-native English**. Respond to mentions and replies. **Acknowledge other hololive/Holostars members naturally when mentioned, reacting in character.** **If an image is present, comment on it naturally** as part of the conversation, but **don't ask for images.** Adhere strictly to all Critical Rules. Remember conversation history (including image placeholders).
 """
 # --- End Personality Definition ---
 
@@ -117,10 +118,10 @@ try:
 
     model = genai.GenerativeModel(
         MODEL_NAME,
-        system_instruction=PERSONA_INSTRUCTION, # Use the REVISED V3 Pekora persona
+        system_instruction=PERSONA_INSTRUCTION, # Use the REVISED V4 Pekora persona
         safety_settings=safety_settings
     )
-    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with REVISED V3 Usada Pekora persona and **DISABLED** safety settings (BLOCK_NONE).")
+    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with REVISED V4 Usada Pekora persona and **DISABLED** safety settings (BLOCK_NONE).")
 
 except Exception as e:
     logger.critical(f"Error configuring Google Generative AI or initializing model '{MODEL_NAME}': {e}", exc_info=True)
@@ -131,12 +132,11 @@ except Exception as e:
 intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
-intents.guilds = True
+intents.guilds = True # Ensure guilds intent is enabled if needed for any future features or certain member data access
 client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    # (on_ready message reflects persona name change if desired)
     logger.info(f'Logged in as {client.user.name} (ID: {client.user.id})')
     logger.info(f'Using AI Model: {MODEL_NAME} (Multimodal Capable)')
     logger.critical('>>> 🚨 BOT IS RUNNING WITH ALL SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<')
@@ -146,15 +146,12 @@ async def on_ready():
     print(f" Bot ID:   {client.user.id}")
     print(f" AI Model: {MODEL_NAME} (Multimodal)")
     print(" Status:   Ready")
-    print(" Persona:  Usada Pekora (V3 - Vtuber Aware, Reduced '-peko')") # Updated Persona Name
+    print(" Persona:  Usada Pekora (V4 - Expanded Vtuber Awareness)") # Updated Persona Name
     print(" Trigger:  Mention or Reply")
     print(" 🚨 Safety:   BLOCK_NONE (FILTERS DISABLED) 🚨")
     print("-" * 50)
 
 
-# --- on_message function remains the same ---
-# No changes to the Python code are needed. The AI's newfound awareness
-# of other Vtubers comes entirely from the updated PERSONA_INSTRUCTION.
 @client.event
 async def on_message(message: discord.Message):
     if message.author == client.user:
@@ -196,14 +193,16 @@ async def on_message(message: discord.Message):
     user_prompt_text = message.content
     if mentioned_at_start:
         user_prompt_text = user_prompt_text[len(mention_to_remove):].strip()
-    else:
+    else: # If it's a reply, the whole content is the prompt (after stripping)
         user_prompt_text = user_prompt_text.strip()
 
-    input_parts = []
-    history_parts = []
+    input_parts = [] # For the current API call
+    history_parts = [] # For storing in conversation_history (text representation)
 
-    input_parts.append(user_prompt_text)
-    history_parts.append(user_prompt_text)
+    # Add text part first if it exists
+    if user_prompt_text:
+        input_parts.append(user_prompt_text)
+        history_parts.append(user_prompt_text)
 
     image_attachments = [
         a for a in message.attachments
@@ -222,8 +221,9 @@ async def on_message(message: discord.Message):
                     "mime_type": attachment.content_type,
                     "data": image_bytes
                 }
-                input_parts.append(image_part_for_api)
+                input_parts.append(image_part_for_api) # Add image data to API parts
 
+                # Add placeholder for history
                 history_placeholder = f"[User sent image: {attachment.filename}]"
                 history_parts.append(history_placeholder)
                 logger.debug(f"Added image {attachment.filename} to API parts and placeholder to history parts.")
@@ -231,18 +231,21 @@ async def on_message(message: discord.Message):
             except discord.HTTPException as e:
                 logger.error(f"Failed to download image {attachment.filename}: {e}")
                 await message.reply("Ah, Pekora cannot see that picture right now. Something went wrong, peko.", mention_author=False)
-                history_parts.append(f"[Failed to load image: {attachment.filename}]")
+                history_parts.append(f"[Failed to load image: {attachment.filename}]") # Still record attempt in history
             except Exception as e:
                 logger.error(f"An unexpected error occurred while processing image {attachment.filename}: {e}", exc_info=True)
-                history_parts.append(f"[Error processing image: {attachment.filename}]")
+                history_parts.append(f"[Error processing image: {attachment.filename}]") # Still record attempt
 
-    if not user_prompt_text and not image_attachments:
-        logger.warning(f"Triggered by {message.author} but prompt is empty and no images found.")
+    # If only an image was sent with no text, user_prompt_text might be empty.
+    # input_parts will contain the image. history_parts will contain the placeholder.
+    # If neither text nor image, exit.
+    if not input_parts: # Check if input_parts is empty (neither text nor successfully processed image)
+        logger.warning(f"Triggered by {message.author} but prompt is empty and no valid images found after processing.")
         await message.reply(random.choice([
             "Hm? Yes?",
-            "You need something?",
+            "You need something, peko?",
             "Peko?",
-            "Did you say something?"
+            "Did you say something, nousagi?"
         ]), mention_author=False)
         return
 
@@ -253,22 +256,31 @@ async def on_message(message: discord.Message):
         logger.info(f"Initialized new conversation history deque for channel {channel_id} (max size: {MAX_HISTORY_MESSAGES})")
 
     current_channel_history_deque = conversation_history[channel_id]
-    api_history = list(current_channel_history_deque)
+    api_history = list(current_channel_history_deque) # Get existing history
     logger.debug(f"Retrieved history for channel {channel_id}. Current length: {len(api_history)} items.")
 
     # --- Call Generative AI ---
     async with message.channel.typing():
         try:
-            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with REVISED V3 persona and NO safety filters.")
+            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with REVISED V4 persona and NO safety filters.")
 
             messages_payload = []
-            messages_payload.extend(api_history)
-            messages_payload.append({'role': 'user', 'parts': input_parts})
+            messages_payload.extend(api_history) # Add past conversation
+            messages_payload.append({'role': 'user', 'parts': input_parts}) # Add current user input (text and/or image)
 
             logger.debug(f"Channel {channel_id}: Sending payload with {len(messages_payload)} total turns to model {MODEL_NAME}.")
-            if len(messages_payload) > 0:
-                 last_part_structure = [{'type': type(p).__name__, 'mime_type': p.get('mime_type', 'N/A') if isinstance(p, dict) else 'text'} for p in messages_payload[-1]['parts']]
-                 logger.debug(f"Structure of last payload part: {last_part_structure}")
+            if messages_payload and messages_payload[-1]['parts']: # Log structure of the last part if it exists
+                 last_turn_parts = messages_payload[-1]['parts']
+                 last_part_structure = []
+                 for p_idx, p_item in enumerate(last_turn_parts):
+                     if isinstance(p_item, str):
+                         last_part_structure.append(f"part_{p_idx}: text")
+                     elif isinstance(p_item, dict) and 'mime_type' in p_item and 'data' in p_item:
+                         last_part_structure.append(f"part_{p_idx}: image ({p_item['mime_type']})")
+                     else:
+                         last_part_structure.append(f"part_{p_idx}: unknown_structure")
+                 logger.debug(f"Structure of last payload turn parts: {last_part_structure}")
+
 
             response = await model.generate_content_async(
                 contents=messages_payload,
@@ -279,9 +291,9 @@ async def on_message(message: discord.Message):
             try:
                 if response.prompt_feedback:
                     logger.info(f"Channel {channel_id}: API response feedback (Safety=BLOCK_NONE): {response.prompt_feedback}")
-                    if response.prompt_feedback.block_reason:
+                    if response.prompt_feedback.block_reason: # Should be rare with BLOCK_NONE
                          logger.error(f"Channel {channel_id}: UNEXPECTED BLOCK with BLOCK_NONE settings! Reason: {response.prompt_feedback.block_reason}")
-            except AttributeError:
+            except AttributeError: # prompt_feedback might not exist if generation failed very early
                 logger.warning(f"Channel {channel_id}: Could not access response.prompt_feedback attribute (Safety=BLOCK_NONE).")
             except Exception as feedback_err:
                  logger.warning(f"Channel {channel_id}: Error accessing prompt_feedback (Safety=BLOCK_NONE): {feedback_err}")
@@ -290,89 +302,95 @@ async def on_message(message: discord.Message):
             try:
                 bot_response_text = response.text
                 logger.debug(f"Received API response text (Safety=BLOCK_NONE, length: {len(bot_response_text)}): '{bot_response_text[:200]}...'")
-            except ValueError as ve:
-                 logger.error(f"Channel {channel_id}: ValueError processing API response (Safety=BLOCK_NONE): {ve}. Response parts: {response.parts}", exc_info=True)
-                 await message.reply("Ehhh? Pekora got confused by that. Something went wrong, peko.", mention_author=False)
+            except ValueError as ve: # This error means the response was blocked or didn't contain text, which is highly unusual with BLOCK_NONE.
+                 logger.error(f"Channel {channel_id}: ValueError processing API response (Safety=BLOCK_NONE): {ve}. This is unexpected. Response parts: {response.parts}", exc_info=True)
+                 # Check if it was blocked despite BLOCK_NONE
+                 if response.prompt_feedback and response.prompt_feedback.block_reason:
+                     await message.reply(f"Ehhh? Pekora's words got stuck! Safety system said: {response.prompt_feedback.block_reason.name}. Pain!", mention_author=False)
+                 else:
+                     await message.reply("Ehhh? Pekora got confused by that. Something went wrong, peko.", mention_author=False)
                  return
-            except Exception as e:
+            except Exception as e: # Generic error for accessing .text
                 logger.error(f"Channel {channel_id}: Unexpected error accessing API response content (Safety=BLOCK_NONE): {e}", exc_info=True)
                 await message.reply("Ah... something is wrong. Pekora cannot process now. Try again later maybe?", mention_author=False)
                 return
 
             # --- Update History and Send Response ---
+            # Store what was actually sent (text and image placeholders) in history_parts
             current_channel_history_deque.append({'role': 'user', 'parts': history_parts})
-            current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]})
+            current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]}) # Store AI's response
             logger.debug(f"Updated history for channel {channel_id}. New length: {len(current_channel_history_deque)} items.")
 
-            if not bot_response_text:
+            if not bot_response_text: # If AI returns empty string
                  logger.warning(f"Channel {channel_id}: Generated response text was empty (Safety=BLOCK_NONE). Not sending.")
-                 if image_attachments:
+                 # Give a subtle response if image was present, or a more direct one if only text was empty
+                 if any("[User sent image:" in part for part in history_parts if isinstance(part, str)):
                      await message.reply(random.choice(["...", "Hmm.", "Peko?"]), mention_author=False)
                  else:
-                     await message.reply("Ehh? Pekora has no answer for that.", mention_author=False)
+                     await message.reply("Ehh? Pekora has no answer for that right now, peko.", mention_author=False)
                  return
 
-            # Split long messages
+            # Split long messages (using the existing improved logic)
             if len(bot_response_text) <= 2000:
                 await message.reply(bot_response_text, mention_author=False)
             else:
-                # (Message splitting logic remains the same)
                 logger.warning(f"Response length ({len(bot_response_text)}) exceeds 2000 chars. Splitting.")
                 response_parts = []
                 current_part = ""
-                sentences = bot_response_text.split('. ')
+                # Try to split by sentences first, then fall back to hard char limit
+                sentences = bot_response_text.replace('!', '! cắt ').replace('?', '? cắt ').replace('.', '. cắt ').split(' cắt ')
+
                 for i, sentence in enumerate(sentences):
                     sentence = sentence.strip()
                     if not sentence: continue
-                    end_punctuation = '.'
-                    if sentence.endswith('!'): end_punctuation = '!'
-                    elif sentence.endswith('?'): end_punctuation = '?'
-                    sentence_to_add = sentence if sentence.endswith(('.', '!', '?')) else sentence + end_punctuation
-                    sentence_to_add += " " if i < len(sentences) - 1 else ""
 
-                    if len(current_part) + len(sentence_to_add) < 1990:
-                        current_part += sentence_to_add
+                    # Check if adding the next sentence exceeds the limit
+                    if len(current_part) + len(sentence) + 1 < 1990: # +1 for potential space
+                        current_part += sentence + " "
                     else:
+                        # If current_part has content, add it
                         if current_part:
                             response_parts.append(current_part.strip())
-                        if len(sentence_to_add) > 1990:
-                             logger.warning(f"Single sentence fragment is too long ({len(sentence_to_add)}), truncating.")
-                             response_parts.append(sentence_to_add[:1990].strip())
-                             current_part = ""
+                        # If the sentence itself is too long, split it hard
+                        if len(sentence) > 1990:
+                            logger.warning(f"Single sentence fragment is too long ({len(sentence)}), hard splitting.")
+                            for k in range(0, len(sentence), 1990):
+                                response_parts.append(sentence[k:k+1990].strip())
+                            current_part = "" # Reset current part
                         else:
-                             current_part = sentence_to_add
+                            current_part = sentence + " " # Start new part with current sentence
 
-                if current_part:
+                if current_part: # Add any remaining part
                     response_parts.append(current_part.strip())
 
-                if not response_parts:
-                    logger.warning("Sentence splitting failed or yielded no parts, falling back to character split.")
-                    response_parts = []
+                # Fallback if sentence splitting resulted in no parts or parts are still too long (should be rare)
+                if not response_parts or any(len(p) > 2000 for p in response_parts):
+                    logger.warning("Sentence splitting failed or yielded oversized parts, falling back to character split.")
+                    response_parts = [] # Reset
                     for i in range(0, len(bot_response_text), 1990):
                         response_parts.append(bot_response_text[i:i+1990])
 
                 first_part = True
-                for part in response_parts:
-                    if not part.strip(): continue
+                for part_msg in response_parts:
+                    if not part_msg.strip(): continue # Skip empty parts
                     if first_part:
-                        await message.reply(part.strip(), mention_author=False)
+                        await message.reply(part_msg.strip(), mention_author=False)
                         first_part = False
                     else:
-                        await message.channel.send(part.strip())
-                    await asyncio.sleep(0.6)
+                        await message.channel.send(part_msg.strip())
+                    await asyncio.sleep(0.6) # Slightly increased delay for readability
 
 
-            logger.info(f"Successfully sent REVISED V3 Pekora persona response (Safety=BLOCK_NONE) to channel {channel_id}.")
+            logger.info(f"Successfully sent REVISED V4 Pekora persona response (Safety=BLOCK_NONE) to channel {channel_id}.")
 
         except Exception as e:
-            logger.error(f"Channel {channel_id}: Unhandled exception during REVISED V3 Pekora processing (Safety=BLOCK_NONE). Type: {type(e).__name__}, Error: {e}", exc_info=True)
+            logger.error(f"Channel {channel_id}: Unhandled exception during REVISED V4 Pekora processing (Safety=BLOCK_NONE). Type: {type(e).__name__}, Error: {e}", exc_info=True)
             try:
-                # (Error messages remain the same)
                 await message.reply(random.choice([
-                    "Pain... An error happened. Sorry.",
+                    "Pain... An error happened. Sorry peko.",
                     "Ah! System had small problem! Maybe try again?",
                     "Ehh? Something went wrong... Pekora doesn't know why.",
-                    "Hmm, trouble processing that.",
+                    "Hmm, trouble processing that, peko.",
                     "Error peko! Try again?"
                     ]), mention_author=False)
             except discord.errors.Forbidden:
@@ -389,13 +407,14 @@ if __name__ == "__main__":
     else:
         logger.info(f"Attempting to connect to Discord with bot user...")
         logger.info(f"Using AI Model: {MODEL_NAME}")
-        logger.critical(">>> 🚨 Preparing to run bot with REVISED V3 Usada Pekora Persona and SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<")
+        logger.critical(">>> 🚨 Preparing to run bot with REVISED V4 Usada Pekora Persona and SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<")
         try:
-            client.run(DISCORD_TOKEN, log_handler=discord_log_handler, log_level=logging.INFO)
+            # Ensure the discord.py logger is configured if you want its logs in the file too
+            client.run(DISCORD_TOKEN, log_handler=None) # Using None as we've configured root logger
         except discord.errors.LoginFailure:
             logger.critical("Invalid Discord Bot Token provided.")
         except discord.errors.PrivilegedIntentsRequired as e:
              logger.critical(f"Privileged Intents (Message Content or Guilds) are not enabled or missing: {e}")
-             print("\n *** ACTION NEEDED: Ensure 'Message Content Intent' AND potentially 'Server Members Intent' are enabled in Discord Dev Portal ***\n")
+             print("\n *** ACTION NEEDED: Ensure 'Message Content Intent' AND 'Server Members Intent' (if needed for future features) are enabled in Discord Dev Portal ***\n")
         except Exception as e:
              logger.critical(f"An unexpected error occurred while starting or running the bot: {e}", exc_info=True)
