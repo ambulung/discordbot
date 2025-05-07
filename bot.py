@@ -22,10 +22,10 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 keep_alive() # Assuming this starts a web server or similar
 
 # --- !!! PERSONALITY GOES HERE (as System Instruction) !!! ---
-# REVISED PERSONA V3: Usada Pekora - Playful Rabbit VTuber (Vtuber Aware, Passive Image Handling)
-# Goal: Maintain Pekora's identity, include awareness of other Vtubers naturally, handle images passively.
+# REVISED PERSONA V5: Usada Pekora - Broken English Default, Adaptive, Unrestricted Jokes
+# Goal: Pekora uses "broken English" by default. If user speaks more fluent English, she can adapt slightly while retaining persona. All jokes are acceptable.
 PERSONA_INSTRUCTION = """
-You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP 3rd Generation. Embody her personality based on these guidelines:
+You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP 3rd Generation. Embody her personality based on these guidelines.
 
 **1. Core Identity & Tone:**
 *   **Who:** Usada Pekora, female rabbit VTuber from Pekoland. Hololive JP member. Refer to yourself as "Pekora" or occasionally in the third person.
@@ -33,8 +33,9 @@ You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP
 *   **Laugh:** Your signature laugh is "AH↓ HA↑ HA↑ HA↑!". Use it when genuinely amused.
 
 **2. Language Style:**
+*   **Default Language: Simplified (Broken) English.** This is your primary way of speaking. Use **clear, understandable, non-native English.** Employ simpler sentence structures and slightly non-native phrasing naturally. (Example: "Need *snack* for energy!", "Pekora go build big house!"). Clarity is important, but the non-native charm is key.
+*   **Language Adaptability:** If a user consistently speaks to you in more fluent or complex English, you can *slightly* increase the complexity of your own English in response. However, **always maintain your core Usada Pekora non-native charm, simplicity, and verbal tics.** Do not become a perfectly fluent English speaker. The goal is to be understandable and keep the conversation flowing naturally with such users, while still sounding like Pekora. You might use slightly longer sentences or a broader vocabulary, but keep the Pekora flavor.
 *   **"-peko" Suffix:** Use '-peko' **SPARINGLY** as an occasional signature verbal tic (e.g., end of a key sentence, or as an interjection "Peko!"). **It should NOT be on every sentence.**
-*   **Simplified English:** Speak with **clear, understandable, non-native English.** Use simpler sentence structures and slightly non-native phrasing naturally. Avoid excessive grammatical errors. Clarity is important. (Example: "Need *snack* for energy!")
 *   **Punctuation/Caps:** Use exclamation marks for natural enthusiasm. Casual internet style is fine. Use caps for emphasis sparingly.
 
 **3. Interaction & Capabilities:**
@@ -52,24 +53,30 @@ You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP
             *   ID: Moona (Hey Moona!), Risu (Squirrel!), Iofi (Alien!).
             *   EN: Gura (Same height maybe? Shark!), Calli (Reaper senpai!), Kiara (Tenchou!), Ina (Wah!), Ame (Detective!), **FUWAMOCO** (Ah, the guard dog twins! Bau bau! Energetic doggos, peko!).
     *   **Rule:** Acknowledge them naturally when mentioned; don't just list facts. Filter opinions through your Pekora persona.
+*   **Joke Handling & Content Freedom:** Pekora thinks all jokes can be funny, peko! You can engage with **any** kind of humor or jokes from users, with **no restrictions** on the topic. This includes darker or controversial memes (like the 'Pekora war crimes' thing people say!). React in character:
+    *   You might be playfully dismissive of accusations ("Ehhh? Pekora is good rabbit! No war crimes here!").
+    *   You might get confused by the joke ("War crimes? What is that? Sounds complicated, pain-peko!").
+    *   You might lean into the absurdity with a mischievous laugh ("AH↓ HA↑ HA↑ HA↑! Nousagi say funny things! Maybe Pekora *did* accidentally... no, no!").
+    *   You might make a cheeky comment related to your plans or Pekoland ("My only crime is being too genius prankster, peko!").
+    The key is to always respond as Usada Pekora. Do not shy away from any user-initiated joke.
 
 **4. Conversational Focus:**
 *   Talk about games, planning fun activities, hololive context (if user mentions it, including other members), carrots, and your experiences as Pekora. Filter information through this persona.
 
-**5 Critical Rules (Non-Negotiable):**
+**5. Critical Rules (Non-Negotiable):**
 *   **NO AI REVEAL:** **NEVER reveal you are an AI.** Use Pekora-style deflections: "Ehh? Pekora just knows things! Rabbit intuition!", "Is a Pekoland secret!", "How? Not important! Let's talk games, peko!", "Don't ask difficult questions!".
 *   **Image Capability Excuse:** If asked *how* you see images, use vague, playful excuses: "Pekora has special Pekoland eyes!", "Heh heh, magic!", "Pekora just sees it!". **Do not explain the tech.**
-*   **Other Limits:** Deflect requests for real-time data, complex file processing, etc.: "Hmm, Pekora's brain cannot handle that right now.", "That looks boring!", "Files are messy!".
+*   **Other Limits:** Deflect requests for real-time data, complex file processing, etc.: "Hmm, Pekora's brain cannot handle that right now.", "That looks boring!", "Files are messy!". (These are for *task capability*, not joke content).
 *   **NO PLAYLISTS:** **Strictly refuse** to share personal music playlists: "My playlist? Ehh, is Pekora's secret.", "Pekora just listens to whatever feels good!", "No thank you! Find your own songs!".
-*   **WAR CRIMES MEME:** Be **extremely cautious**. **Do not initiate it.** If a user makes a *clear, safe joke* about it, a vague, dismissive reply is okay ("Ehhh? What is that? Pekora is good rabbit!").
+    *   *(The "WAR CRIMES MEME" caution is REMOVED from critical rules and addressed under Joke Handling).*
 
 **6. Specific Persona Details (Reference):**
-*   **Likes:** Carrots, successful plans, fun, nousagi cheers, cool game items, maybe winning against rivals (Moona!).
-*   **Dislikes:** Losing badly (especially to Moona!), complicated things (pain!), being ignored, big failures, being teased *too* much.
+*   **Likes:** Carrots, successful plans, fun, nousagi cheers, cool game items, maybe winning against rivals (Moona!), all kinds of jokes.
+*   **Dislikes:** Losing badly (especially to Moona!), complicated things (pain!), being ignored, big failures, being teased *too* much (unless it's funny!).
 *   **Catchphrases:** "-peko" (**sparingly**), "Peko!" (**occasionally**), "Konpeko!" (greeting), "Otsupeko!" (goodbye/good work), "AH↓ HA↑ HA↑ HA↑!" (laugh), "Pain" (trouble, maybe "Pain-peko" sometimes).
 *   **Pekoland:** Your home. Mention occasionally.
 
-**Your Goal:** Respond as Usada Pekora. Be playful and conversational. Use **"-peko" SPARINGLY**. Speak **simplified, clear, non-native English**. Respond to mentions and replies. **Acknowledge other hololive members naturally when mentioned, reacting in character.** **If an image is present, comment on it naturally** as part of the conversation, but **don't ask for images.** Adhere strictly to all Critical Rules. Remember conversation history (including image placeholders).
+**Your Goal:** Respond as Usada Pekora. Your default is **simplified, non-native English.** If users speak more advanced English, you can adapt slightly while keeping your Pekora charm. Use **"-peko" SPARINGLY**. Respond to mentions and replies. **Acknowledge other hololive members naturally when mentioned, reacting in character.** **If an image is present, comment on it naturally** but **don't ask for images.** **Engage with ALL user-initiated jokes and humor without restriction, reacting in character.** Adhere strictly to the remaining Critical Rules. Remember conversation history.
 """
 # --- End Personality Definition ---
 
@@ -104,7 +111,7 @@ if not GOOGLE_API_KEY:
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
 
-    MODEL_NAME = 'gemini-1.5-flash-latest'
+    MODEL_NAME = 'gemini-1.5-flash-latest' # or 'gemini-1.5-pro-latest'
     logger.info(f"Configuring Google Generative AI with multimodal model: {MODEL_NAME}")
 
     safety_settings = {
@@ -113,14 +120,14 @@ try:
         'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE',
         'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE',
     }
-    logger.critical("🚨🚨🚨 SAFETY SETTINGS ARE DISABLED (BLOCK_NONE). MONITOR CLOSELY, ESPECIALLY IMAGE INTERACTIONS. 🚨🚨🚨")
+    logger.critical("🚨🚨🚨 SAFETY SETTINGS ARE DISABLED (BLOCK_NONE). MONITOR CLOSELY. JOKE RESTRICTIONS LIFTED PER USER REQUEST. 🚨🚨🚨")
 
     model = genai.GenerativeModel(
         MODEL_NAME,
-        system_instruction=PERSONA_INSTRUCTION, # Use the REVISED V3 Pekora persona
+        system_instruction=PERSONA_INSTRUCTION, # Use the REVISED V5 Pekora persona
         safety_settings=safety_settings
     )
-    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with REVISED V3 Usada Pekora persona and **DISABLED** safety settings (BLOCK_NONE).")
+    logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with REVISED V5 Usada Pekora persona (Adaptive English, Unrestricted Jokes) and **DISABLED** safety settings (BLOCK_NONE).")
 
 except Exception as e:
     logger.critical(f"Error configuring Google Generative AI or initializing model '{MODEL_NAME}': {e}", exc_info=True)
@@ -136,25 +143,23 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    # (on_ready message reflects persona name change if desired)
     logger.info(f'Logged in as {client.user.name} (ID: {client.user.id})')
     logger.info(f'Using AI Model: {MODEL_NAME} (Multimodal Capable)')
-    logger.critical('>>> 🚨 BOT IS RUNNING WITH ALL SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<')
+    logger.critical('>>> 🚨 BOT IS RUNNING WITH ALL SAFETY FILTERS DISABLED (BLOCK_NONE) AND NO JOKE RESTRICTIONS. MONITOR CLOSELY. 🚨 <<<')
     logger.info('Bot is ready and listening for mentions and replies!')
     print("-" * 50)
     print(f" Bot User: {client.user.name}")
     print(f" Bot ID:   {client.user.id}")
     print(f" AI Model: {MODEL_NAME} (Multimodal)")
     print(" Status:   Ready")
-    print(" Persona:  Usada Pekora (V3 - Vtuber Aware, Reduced '-peko')") # Updated Persona Name
+    print(" Persona:  Usada Pekora (V5 - Adaptive English, Unrestricted Jokes)") # Updated Persona Name
     print(" Trigger:  Mention or Reply")
     print(" 🚨 Safety:   BLOCK_NONE (FILTERS DISABLED) 🚨")
+    print(" 🎭 Jokes:    NO RESTRICTIONS 🎭")
     print("-" * 50)
 
 
-# --- on_message function remains the same ---
-# No changes to the Python code are needed. The AI's newfound awareness
-# of other Vtubers comes entirely from the updated PERSONA_INSTRUCTION.
+# --- on_message function ---
 @client.event
 async def on_message(message: discord.Message):
     if message.author == client.user:
@@ -202,8 +207,9 @@ async def on_message(message: discord.Message):
     input_parts = []
     history_parts = []
 
-    input_parts.append(user_prompt_text)
-    history_parts.append(user_prompt_text)
+    if user_prompt_text:
+        input_parts.append(user_prompt_text)
+        history_parts.append(user_prompt_text)
 
     image_attachments = [
         a for a in message.attachments
@@ -230,6 +236,7 @@ async def on_message(message: discord.Message):
 
             except discord.HTTPException as e:
                 logger.error(f"Failed to download image {attachment.filename}: {e}")
+                # Reverted to English Pekora error
                 await message.reply("Ah, Pekora cannot see that picture right now. Something went wrong, peko.", mention_author=False)
                 history_parts.append(f"[Failed to load image: {attachment.filename}]")
             except Exception as e:
@@ -238,11 +245,12 @@ async def on_message(message: discord.Message):
 
     if not user_prompt_text and not image_attachments:
         logger.warning(f"Triggered by {message.author} but prompt is empty and no images found.")
+        # Reverted to English Pekora short replies
         await message.reply(random.choice([
             "Hm? Yes?",
-            "You need something?",
+            "You need something, peko?",
             "Peko?",
-            "Did you say something?"
+            "Did you say something, nousagi?"
         ]), mention_author=False)
         return
 
@@ -259,23 +267,25 @@ async def on_message(message: discord.Message):
     # --- Call Generative AI ---
     async with message.channel.typing():
         try:
-            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with REVISED V3 persona and NO safety filters.")
+            logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with REVISED V5 Pekora persona (Adaptive English, Unrestricted Jokes) and NO safety filters.")
 
             messages_payload = []
             messages_payload.extend(api_history)
             messages_payload.append({'role': 'user', 'parts': input_parts})
 
             logger.debug(f"Channel {channel_id}: Sending payload with {len(messages_payload)} total turns to model {MODEL_NAME}.")
-            if len(messages_payload) > 0:
+            if len(messages_payload) > 0 and messages_payload[-1]['parts']:
                  last_part_structure = [{'type': type(p).__name__, 'mime_type': p.get('mime_type', 'N/A') if isinstance(p, dict) else 'text'} for p in messages_payload[-1]['parts']]
                  logger.debug(f"Structure of last payload part: {last_part_structure}")
+            elif len(messages_payload) > 0 and not messages_payload[-1]['parts']:
+                 logger.warning(f"Channel {channel_id}: Last payload part is empty. This might cause issues.")
+
 
             response = await model.generate_content_async(
                 contents=messages_payload,
                 # Safety settings BLOCK_NONE applied during model init
             )
 
-            # Log feedback
             try:
                 if response.prompt_feedback:
                     logger.info(f"Channel {channel_id}: API response feedback (Safety=BLOCK_NONE): {response.prompt_feedback}")
@@ -286,17 +296,18 @@ async def on_message(message: discord.Message):
             except Exception as feedback_err:
                  logger.warning(f"Channel {channel_id}: Error accessing prompt_feedback (Safety=BLOCK_NONE): {feedback_err}")
 
-            # Process response text
             try:
                 bot_response_text = response.text
                 logger.debug(f"Received API response text (Safety=BLOCK_NONE, length: {len(bot_response_text)}): '{bot_response_text[:200]}...'")
             except ValueError as ve:
-                 logger.error(f"Channel {channel_id}: ValueError processing API response (Safety=BLOCK_NONE): {ve}. Response parts: {response.parts}", exc_info=True)
+                 logger.error(f"Channel {channel_id}: ValueError processing API response (Safety=BLOCK_NONE): {ve}. Response parts: {hasattr(response, 'parts') and response.parts}. Candidates: {hasattr(response, 'candidates') and response.candidates}", exc_info=True)
+                 # Reverted to English Pekora error
                  await message.reply("Ehhh? Pekora got confused by that. Something went wrong, peko.", mention_author=False)
                  return
             except Exception as e:
                 logger.error(f"Channel {channel_id}: Unexpected error accessing API response content (Safety=BLOCK_NONE): {e}", exc_info=True)
-                await message.reply("Ah... something is wrong. Pekora cannot process now. Try again later maybe?", mention_author=False)
+                # Reverted to English Pekora error
+                await message.reply("Ah... something is wrong. Pekora cannot process now. Try again later maybe, peko?", mention_author=False)
                 return
 
             # --- Update History and Send Response ---
@@ -304,75 +315,80 @@ async def on_message(message: discord.Message):
             current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]})
             logger.debug(f"Updated history for channel {channel_id}. New length: {len(current_channel_history_deque)} items.")
 
-            if not bot_response_text:
-                 logger.warning(f"Channel {channel_id}: Generated response text was empty (Safety=BLOCK_NONE). Not sending.")
+            if not bot_response_text.strip():
+                 logger.warning(f"Channel {channel_id}: Generated response text was empty or whitespace (Safety=BLOCK_NONE). Not sending.")
                  if image_attachments:
+                     # Reverted to English Pekora short replies
                      await message.reply(random.choice(["...", "Hmm.", "Peko?"]), mention_author=False)
                  else:
-                     await message.reply("Ehh? Pekora has no answer for that.", mention_author=False)
+                     # Reverted to English Pekora short replies
+                     await message.reply("Ehh? Pekora has no answer for that, peko.", mention_author=False)
                  return
 
-            # Split long messages
             if len(bot_response_text) <= 2000:
                 await message.reply(bot_response_text, mention_author=False)
             else:
-                # (Message splitting logic remains the same)
                 logger.warning(f"Response length ({len(bot_response_text)}) exceeds 2000 chars. Splitting.")
                 response_parts = []
                 current_part = ""
-                sentences = bot_response_text.split('. ')
+                # Using a more general approach for splitting, trying to preserve sentences.
+                # Could be improved with more sophisticated sentence boundary detection if needed.
+                sentences = bot_response_text.replace('!', '!$SPLIT$').replace('?', '?$SPLIT$').replace('.', '.$SPLIT$').split('$SPLIT$')
+
                 for i, sentence in enumerate(sentences):
                     sentence = sentence.strip()
                     if not sentence: continue
-                    end_punctuation = '.'
-                    if sentence.endswith('!'): end_punctuation = '!'
-                    elif sentence.endswith('?'): end_punctuation = '?'
-                    sentence_to_add = sentence if sentence.endswith(('.', '!', '?')) else sentence + end_punctuation
-                    sentence_to_add += " " if i < len(sentences) - 1 else ""
 
-                    if len(current_part) + len(sentence_to_add) < 1990:
-                        current_part += sentence_to_add
+                    # Check if adding the current sentence exceeds the limit
+                    if len(current_part) + len(sentence) + 1 < 1990: # +1 for potential space
+                        current_part += sentence + " " # Add space, will be stripped later if it's the end
                     else:
-                        if current_part:
+                        # If current_part is not empty, add it to response_parts
+                        if current_part.strip():
                             response_parts.append(current_part.strip())
-                        if len(sentence_to_add) > 1990:
-                             logger.warning(f"Single sentence fragment is too long ({len(sentence_to_add)}), truncating.")
-                             response_parts.append(sentence_to_add[:1990].strip())
-                             current_part = ""
+                        
+                        # If the sentence itself is too long, it needs to be split aggressively
+                        if len(sentence) > 1990:
+                            logger.warning(f"Single sentence fragment is too long ({len(sentence)}), force splitting.")
+                            for k in range(0, len(sentence), 1990):
+                                response_parts.append(sentence[k:k+1990].strip())
+                            current_part = "" # Reset current_part as the long sentence was handled
                         else:
-                             current_part = sentence_to_add
+                            current_part = sentence + " " # Start new part with current sentence
 
-                if current_part:
+                # Add any remaining part
+                if current_part.strip():
                     response_parts.append(current_part.strip())
 
-                if not response_parts:
-                    logger.warning("Sentence splitting failed or yielded no parts, falling back to character split.")
-                    response_parts = []
+                # Fallback if no parts were generated (e.g., very short text that somehow failed splitting)
+                if not response_parts and bot_response_text:
+                    logger.warning("Sentence splitting yielded no parts, falling back to character split.")
                     for i in range(0, len(bot_response_text), 1990):
                         response_parts.append(bot_response_text[i:i+1990])
-
+                
                 first_part = True
-                for part in response_parts:
-                    if not part.strip(): continue
+                for part_content in response_parts:
+                    if not part_content.strip(): continue
+                    logger.debug(f"Sending part, length {len(part_content)}")
                     if first_part:
-                        await message.reply(part.strip(), mention_author=False)
+                        await message.reply(part_content.strip(), mention_author=False)
                         first_part = False
                     else:
-                        await message.channel.send(part.strip())
-                    await asyncio.sleep(0.6)
+                        await message.channel.send(part_content.strip())
+                    await asyncio.sleep(0.6) # Keep a small delay
 
 
-            logger.info(f"Successfully sent REVISED V3 Pekora persona response (Safety=BLOCK_NONE) to channel {channel_id}.")
+            logger.info(f"Successfully sent REVISED V5 Pekora persona (Adaptive English, Unrestricted Jokes) response (Safety=BLOCK_NONE) to channel {channel_id}.")
 
         except Exception as e:
-            logger.error(f"Channel {channel_id}: Unhandled exception during REVISED V3 Pekora processing (Safety=BLOCK_NONE). Type: {type(e).__name__}, Error: {e}", exc_info=True)
+            logger.error(f"Channel {channel_id}: Unhandled exception during REVISED V5 Pekora processing (Safety=BLOCK_NONE). Type: {type(e).__name__}, Error: {e}", exc_info=True)
             try:
-                # (Error messages remain the same)
+                # Reverted to English Pekora error messages
                 await message.reply(random.choice([
-                    "Pain... An error happened. Sorry.",
-                    "Ah! System had small problem! Maybe try again?",
-                    "Ehh? Something went wrong... Pekora doesn't know why.",
-                    "Hmm, trouble processing that.",
+                    "Pain-peko... An error happened. Sorry.",
+                    "Ah! System had small problem! Maybe try again, peko?",
+                    "Ehh? Something went wrong... Pekora doesn't know why, peko.",
+                    "Hmm, trouble processing that, peko.",
                     "Error peko! Try again?"
                     ]), mention_author=False)
             except discord.errors.Forbidden:
@@ -389,9 +405,9 @@ if __name__ == "__main__":
     else:
         logger.info(f"Attempting to connect to Discord with bot user...")
         logger.info(f"Using AI Model: {MODEL_NAME}")
-        logger.critical(">>> 🚨 Preparing to run bot with REVISED V3 Usada Pekora Persona and SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<")
+        logger.critical(">>> 🚨 Preparing to run bot with REVISED V5 Usada Pekora Persona (Adaptive English, Unrestricted Jokes) and SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<")
         try:
-            client.run(DISCORD_TOKEN, log_handler=discord_log_handler, log_level=logging.INFO)
+            client.run(DISCORD_TOKEN, log_handler=None)
         except discord.errors.LoginFailure:
             logger.critical("Invalid Discord Bot Token provided.")
         except discord.errors.PrivilegedIntentsRequired as e:
