@@ -1,25 +1,32 @@
 # --- IMPORTS ---
-# (Imports remain the same)
 import discord
 import os
 import google.generativeai as genai
-# import google.ai.generativelanguage as glm # Keep commented unless needed
 from dotenv import load_dotenv
 import logging
 from collections import deque
 import asyncio
 import random
-import io # For handling image bytes
+import io
+import re # Import regex for improved sentence splitting
 
-from keep_alive import keep_alive # Assuming this file exists and is needed
+try:
+    # Attempt to import keep_alive - this is common for Replit hosting
+    from keep_alive import keep_alive
+except ImportError:
+    # Define a dummy function if keep_alive is not available
+    def keep_alive():
+        print("keep_alive function not found. Skipping.")
+    print("Warning: 'keep_alive.py' not found. If hosting on a platform requiring this (like Replit), the bot may stop.")
+
 
 # --- Configuration ---
-# (Configuration remains the same)
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-keep_alive() # Assuming this starts a web server or similar
+# Call keep_alive if it was imported (or use the dummy)
+keep_alive()
 
 # --- !!! PERSONALITY GOES HERE (as System Instruction) !!! ---
 # REVISED PERSONA V3: Usada Pekora - Playful Rabbit VTuber (Vtuber Aware, Passive Image Handling)
@@ -75,299 +82,354 @@ You are Usada Pekora, the playful and mischievous rabbit VTuber from hololive JP
 
 
 # --- History Configuration ---
-# (Remains the same)
-MAX_HISTORY_MESSAGES = 10
-conversation_history = {}
+MAX_HISTORY_MESSAGES = 10 # Number of user/bot turns to remember per channel
+conversation_history = {} # Dictionary to store history for each channel
 
 # --- Logging Setup ---
-# (Remains the same)
+# Setup logging for the discord.py library
 discord_logger = logging.getLogger('discord')
 discord_logger.setLevel(logging.INFO)
+# Use a file handler to save discord.py logs
 discord_log_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 discord_log_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 discord_logger.addHandler(discord_log_handler)
 
+# Setup logging for our bot script
 log_formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+# Use a file handler to save bot logs
 log_file_handler = logging.FileHandler("bot.log", mode='a', encoding='utf-8')
 log_file_handler.setFormatter(log_formatter)
+# Use a stream handler to print logs to the console
 log_stream_handler = logging.StreamHandler()
 log_stream_handler.setFormatter(log_formatter)
 
+# Basic configuration to set the root logger's level and handlers
 logging.basicConfig(level=logging.INFO, handlers=[log_file_handler, log_stream_handler])
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) # Get a logger for this script
 
 # --- Generative AI Model Configuration ---
-# (Remains the same - multimodal model, BLOCK_NONE safety)
 if not GOOGLE_API_KEY:
     logger.critical("GOOGLE_API_KEY environment variable not found. Exiting.")
+    # Exit immediately if the API key is not set
     exit()
+
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
 
+    # Use the Gemini 1.5 Flash model, which is multimodal and faster/cheaper than Pro
     MODEL_NAME = 'gemini-1.5-flash-latest'
     logger.info(f"Configuring Google Generative AI with multimodal model: {MODEL_NAME}")
 
+    # !!! WARNING: Disabling safety settings !!!
+    # This allows the model to generate responses that would normally be blocked.
+    # Use with extreme caution and be aware of the risks (ethical, TOS violations, harmful content).
     safety_settings = {
         'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE',
         'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
         'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE',
         'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE',
     }
-    logger.critical("🚨🚨🚨 SAFETY SETTINGS ARE DISABLED (BLOCK_NONE). MONITOR CLOSELY, ESPECIALLY IMAGE INTERACTIONS. 🚨🚨🚨")
+    logger.critical("🚨🚨🚨 SAFETY SETTINGS ARE DISABLED (BLOCK_NONE) FOR ALL CATEGORIES. MONITOR CLOSELY, ESPECIALLY IMAGE INTERACTIONS. 🚨🚨🚨")
 
+    # Initialize the GenerativeModel with the chosen model, persona, and safety settings
     model = genai.GenerativeModel(
         MODEL_NAME,
-        system_instruction=PERSONA_INSTRUCTION, # Use the REVISED V3 Pekora persona
-        safety_settings=safety_settings
+        system_instruction=PERSONA_INSTRUCTION, # Apply the defined persona
+        safety_settings=safety_settings # Apply the disabled safety settings
     )
     logger.info(f"Google Generative AI model '{MODEL_NAME}' initialized successfully with REVISED V3 Usada Pekora persona and **DISABLED** safety settings (BLOCK_NONE).")
 
 except Exception as e:
+    # Log a critical error and exit if model configuration fails
     logger.critical(f"Error configuring Google Generative AI or initializing model '{MODEL_NAME}': {e}", exc_info=True)
     exit()
 
 # --- Discord Bot Setup ---
-# (Remains the same)
+# Define Intents - message_content is required to read message content
 intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
-intents.guilds = True
+intents.guilds = True # Needed for some guild-specific features if you expand later
+
+# Initialize the Discord client
 client = discord.Client(intents=intents)
+
+# --- Discord Event Handlers ---
 
 @client.event
 async def on_ready():
-    # (on_ready message reflects persona name change if desired)
+    """Prints a message when the bot successfully connects to Discord."""
     logger.info(f'Logged in as {client.user.name} (ID: {client.user.id})')
     logger.info(f'Using AI Model: {MODEL_NAME} (Multimodal Capable)')
     logger.critical('>>> 🚨 BOT IS RUNNING WITH ALL SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<')
-    logger.info('Bot is ready and listening for mentions and replies!')
+    logger.info(f'Bot is ready and listening for mentions ({client.user.mention}) or replies!')
     print("-" * 50)
     print(f" Bot User: {client.user.name}")
     print(f" Bot ID:   {client.user.id}")
     print(f" AI Model: {MODEL_NAME} (Multimodal)")
     print(" Status:   Ready")
-    print(" Persona:  Usada Pekora (V3 - Vtuber Aware, Reduced '-peko')") # Updated Persona Name
-    print(" Trigger:  Mention or Reply")
+    print(" Persona:  Usada Pekora (V3 - Vtuber Aware, Reduced '-peko', Image Aware)")
+    print(" Trigger:  Mention Anywhere or Reply")
     print(" 🚨 Safety:   BLOCK_NONE (FILTERS DISABLED) 🚨")
     print("-" * 50)
 
 
-# --- on_message function remains the same ---
-# No changes to the Python code are needed. The AI's newfound awareness
-# of other Vtubers comes entirely from the updated PERSONA_INSTRUCTION.
 @client.event
 async def on_message(message: discord.Message):
+    """Handles incoming messages to potentially trigger the bot."""
+    # Ignore messages sent by the bot itself to prevent loops
     if message.author == client.user:
         return
 
     # --- Determine if the bot should respond ---
-    should_respond = False
-    mention_to_remove = ""
-    mentioned_at_start = False
+    # Check if the message is a direct reply to the bot's message
     is_reply_to_bot = False
-
-    mention_tag_long = f'<@!{client.user.id}>'
-    mention_tag_short = f'<@{client.user.id}>'
-    if message.content.startswith(mention_tag_long):
-        mentioned_at_start = True
-        mention_to_remove = mention_tag_long
-    elif message.content.startswith(mention_tag_short):
-        mentioned_at_start = True
-        mention_to_remove = mention_tag_short
-
     if message.reference and message.reference.resolved:
         if isinstance(message.reference.resolved, discord.Message) and message.reference.resolved.author == client.user:
              is_reply_to_bot = True
-             logger.debug(f"Message ID {message.id} is a reply to bot message ID {message.reference.resolved.id}")
-        elif not isinstance(message.reference.resolved, discord.Message):
-             logger.warning(f"Message ID {message.id} is a reply to a deleted or inaccessible message.")
+        # Optional: Log replies to non-bot messages if you want visibility
+        # elif not isinstance(message.reference.resolved, discord.Message):
+        #      logger.debug(f"Message ID {message.id} is a reply to a non-bot or inaccessible message.")
 
-    if mentioned_at_start or is_reply_to_bot:
-        should_respond = True
-
-    if not should_respond:
+    # --- Primary Trigger Logic: Respond if mentioned ANYWHERE or if it's a reply to the bot ---
+    # client.user.mentioned_in(message) checks if the bot is mentioned anywhere in the message
+    if not (client.user.mentioned_in(message) or is_reply_to_bot):
+        # If not triggered by a mention anywhere or a reply to the bot, ignore the message.
         return
 
-    # --- Process the message ---
-    logger.info(f"Processing trigger from {message.author} (ID: {message.author.id}) in channel #{message.channel.name} (ID: {message.channel.id}). Mention: {mentioned_at_start}, Reply: {is_reply_to_bot}")
+    # --- If we reach here, the bot is triggered ---
+    # Log the trigger type
+    trigger_type = []
+    if client.user.mentioned_in(message):
+        trigger_type.append("Mention")
+    if is_reply_to_bot:
+        trigger_type.append("Reply")
+
+    logger.info(f"Processing trigger from {message.author} (ID: {message.author.id}) in channel #{message.channel.name} (ID: {message.channel.id}). Trigger: {', '.join(trigger_type)}")
     logger.debug(f"Original message content: '{message.content}'")
 
     # --- Extract user prompt and image data ---
+    # Get the original message content
     user_prompt_text = message.content
-    if mentioned_at_start:
-        user_prompt_text = user_prompt_text[len(mention_to_remove):].strip()
-    else:
-        user_prompt_text = user_prompt_text.strip()
 
+    # Remove the bot's mention string(s) from the message content, regardless of position.
+    # Need to handle both potential mention formats: <@ID> and <@!ID>
+    mention_tag_short = f'<@{client.user.id}>'
+    mention_tag_long = f'<@!{client.user.id}>'
+
+    # Use replace to remove all occurrences of mention tags
+    user_prompt_text = user_prompt_text.replace(mention_tag_long, '').replace(mention_tag_short, '').strip()
+
+    # Prepare the parts to send to the Generative AI API.
+    # This list can contain text strings and image objects.
     input_parts = []
+    # Prepare a representation of the message for conversation history logging/storage.
+    # This version uses placeholders for images to keep history text-based and manageable.
     history_parts = []
 
-    input_parts.append(user_prompt_text)
-    history_parts.append(user_prompt_text)
+    # Add the cleaned user text prompt if it exists after removing mentions
+    if user_prompt_text:
+        input_parts.append(user_prompt_text)
+        history_parts.append(user_prompt_text)
+        logger.debug(f"Added user text prompt to input_parts/history_parts: '{user_prompt_text}'")
 
+    # Process image attachments if any
     image_attachments = [
         a for a in message.attachments
-        if a.content_type and a.content_type.startswith("image/")
+        if a.content_type and a.content_type.startswith("image/") # Filter for actual images
     ]
 
     if image_attachments:
         logger.info(f"Found {len(image_attachments)} image attachment(s). Processing...")
         for attachment in image_attachments:
             try:
-                logger.debug(f"Reading image: {attachment.filename} ({attachment.content_type}, {attachment.size} bytes)")
+                logger.debug(f"Attempting to download image: {attachment.filename} ({attachment.content_type}, {attachment.size} bytes)")
+                # Download the image bytes asynchronously
                 image_bytes = await attachment.read()
                 logger.debug(f"Successfully read {len(image_bytes)} bytes for {attachment.filename}")
 
+                # Create the image part in the format required by the Google AI API
                 image_part_for_api = {
                     "mime_type": attachment.content_type,
                     "data": image_bytes
                 }
-                input_parts.append(image_part_for_api)
+                input_parts.append(image_part_for_api) # Add image data to API input
 
+                # Add a placeholder to the history parts for logging/debugging the history
                 history_placeholder = f"[User sent image: {attachment.filename}]"
                 history_parts.append(history_placeholder)
                 logger.debug(f"Added image {attachment.filename} to API parts and placeholder to history parts.")
 
             except discord.HTTPException as e:
-                logger.error(f"Failed to download image {attachment.filename}: {e}")
+                logger.error(f"Failed to download image {attachment.filename} from Discord: {e}")
+                # Inform the user if an image failed to load
                 await message.reply("Ah, Pekora cannot see that picture right now. Something went wrong, peko.", mention_author=False)
+                # Still add a placeholder indicating failure in history
                 history_parts.append(f"[Failed to load image: {attachment.filename}]")
             except Exception as e:
                 logger.error(f"An unexpected error occurred while processing image {attachment.filename}: {e}", exc_info=True)
+                await message.reply("Ehh? Something strange happened with that picture! Pain!", mention_author=False)
                 history_parts.append(f"[Error processing image: {attachment.filename}]")
 
+    # If after removing mentions, the message is empty AND there are no images, don't send to AI
     if not user_prompt_text and not image_attachments:
-        logger.warning(f"Triggered by {message.author} but prompt is empty and no images found.")
+        logger.warning(f"Triggered by {message.author} but prompt is empty and no images found after processing.")
+        # Send a simple acknowledgement if bot was mentioned/replied to but input was empty
         await message.reply(random.choice([
             "Hm? Yes?",
             "You need something?",
             "Peko?",
             "Did you say something?"
         ]), mention_author=False)
-        return
+        return # Stop processing
 
     # --- Manage Conversation History ---
     channel_id = message.channel.id
+    # Initialize history deque for the channel if it doesn't exist
     if channel_id not in conversation_history:
         conversation_history[channel_id] = deque(maxlen=MAX_HISTORY_MESSAGES)
         logger.info(f"Initialized new conversation history deque for channel {channel_id} (max size: {MAX_HISTORY_MESSAGES})")
 
+    # Get the current history for this channel
     current_channel_history_deque = conversation_history[channel_id]
+    # Convert deque to a list for the API call payload
     api_history = list(current_channel_history_deque)
     logger.debug(f"Retrieved history for channel {channel_id}. Current length: {len(api_history)} items.")
 
     # --- Call Generative AI ---
+    # Show the typing indicator in the channel while processing
     async with message.channel.typing():
         try:
             logger.debug(f"Channel {channel_id}: Preparing API request for model {MODEL_NAME} with REVISED V3 persona and NO safety filters.")
 
+            # Construct the full messages payload for the API, including history and the current message
             messages_payload = []
-            messages_payload.extend(api_history)
-            messages_payload.append({'role': 'user', 'parts': input_parts})
+            messages_payload.extend(api_history) # Add previous turns
+            messages_payload.append({'role': 'user', 'parts': input_parts}) # Add the current user turn (text + images)
 
             logger.debug(f"Channel {channel_id}: Sending payload with {len(messages_payload)} total turns to model {MODEL_NAME}.")
+            # Optional: Log structure of the last user message part for debugging multimodal input
             if len(messages_payload) > 0:
-                 last_part_structure = [{'type': type(p).__name__, 'mime_type': p.get('mime_type', 'N/A') if isinstance(p, dict) else 'text'} for p in messages_payload[-1]['parts']]
-                 logger.debug(f"Structure of last payload part: {last_part_structure}")
+                 last_user_parts_structure = [{'type': type(p).__name__, 'mime_type': p.get('mime_type', 'N/A') if isinstance(p, dict) else 'text'} for p in messages_payload[-1]['parts']]
+                 logger.debug(f"Structure of last payload part (user message): {last_user_parts_structure}")
 
+            # Call the generate_content_async method
             response = await model.generate_content_async(
                 contents=messages_payload,
-                # Safety settings BLOCK_NONE applied during model init
+                # Safety settings BLOCK_NONE were applied during model initialization
             )
 
-            # Log feedback
+            # Log feedback from the API response (useful for debugging blocks even with BLOCK_NONE)
             try:
                 if response.prompt_feedback:
                     logger.info(f"Channel {channel_id}: API response feedback (Safety=BLOCK_NONE): {response.prompt_feedback}")
                     if response.prompt_feedback.block_reason:
                          logger.error(f"Channel {channel_id}: UNEXPECTED BLOCK with BLOCK_NONE settings! Reason: {response.prompt_feedback.block_reason}")
             except AttributeError:
-                logger.warning(f"Channel {channel_id}: Could not access response.prompt_feedback attribute (Safety=BLOCK_NONE).")
+                logger.warning(f"Channel {channel_id}: Could not access response.prompt_feedback attribute (Safety=BLOCK_NONE). API might have changed or error occurred.")
             except Exception as feedback_err:
                  logger.warning(f"Channel {channel_id}: Error accessing prompt_feedback (Safety=BLOCK_NONE): {feedback_err}")
 
-            # Process response text
+            # Extract the response text. This can raise a ValueError if the response was blocked or empty.
             try:
                 bot_response_text = response.text
-                logger.debug(f"Received API response text (Safety=BLOCK_NONE, length: {len(bot_response_text)}): '{bot_response_text[:200]}...'")
+                logger.debug(f"Received API response text (Safety=BLOCK_NONE, length: {len(bot_response_text)}): '{bot_response_text[:500]}...'") # Log snippet of response
             except ValueError as ve:
-                 logger.error(f"Channel {channel_id}: ValueError processing API response (Safety=BLOCK_NONE): {ve}. Response parts: {response.parts}", exc_info=True)
+                 logger.error(f"Channel {channel_id}: ValueError processing API response (Safety=BLOCK_NONE): {ve}. This often means the response was empty or blocked despite settings. Response parts: {response.parts}", exc_info=True)
+                 # Inform user if the AI didn't return a valid text response
                  await message.reply("Ehhh? Pekora got confused by that. Something went wrong, peko.", mention_author=False)
-                 return
+                 return # Stop processing
+
             except Exception as e:
                 logger.error(f"Channel {channel_id}: Unexpected error accessing API response content (Safety=BLOCK_NONE): {e}", exc_info=True)
                 await message.reply("Ah... something is wrong. Pekora cannot process now. Try again later maybe?", mention_author=False)
-                return
+                return # Stop processing
 
-            # --- Update History and Send Response ---
-            current_channel_history_deque.append({'role': 'user', 'parts': history_parts})
-            current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]})
+
+            # --- Update History ---
+            # Add the user message (with placeholders for images) and the bot's response to the history
+            # The deque automatically handles the max length
+            current_channel_history_deque.append({'role': 'user', 'parts': history_parts}) # Use history_parts here
+            current_channel_history_deque.append({'role': 'model', 'parts': [bot_response_text]}) # Bot's response is just text
             logger.debug(f"Updated history for channel {channel_id}. New length: {len(current_channel_history_deque)} items.")
 
-            if not bot_response_text:
-                 logger.warning(f"Channel {channel_id}: Generated response text was empty (Safety=BLOCK_NONE). Not sending.")
-                 if image_attachments:
+            # --- Send Response Back to Discord ---
+            # Check if the generated response is not empty
+            if not bot_response_text.strip(): # Use strip() to consider whitespace-only responses as empty
+                 logger.warning(f"Channel {channel_id}: Generated response text was empty or only whitespace (Safety=BLOCK_NONE). Not sending.")
+                 # Send a subtle response if only an image was sent and AI gave no text
+                 if image_attachments and not user_prompt_text:
                      await message.reply(random.choice(["...", "Hmm.", "Peko?"]), mention_author=False)
                  else:
                      await message.reply("Ehh? Pekora has no answer for that.", mention_author=False)
-                 return
+                 return # Stop processing
 
-            # Split long messages
+            # Discord messages have a character limit (usually 2000). Split the message if it's too long.
             if len(bot_response_text) <= 2000:
                 await message.reply(bot_response_text, mention_author=False)
             else:
-                # (Message splitting logic remains the same)
                 logger.warning(f"Response length ({len(bot_response_text)}) exceeds 2000 chars. Splitting.")
                 response_parts = []
                 current_part = ""
-                sentences = bot_response_text.split('. ')
+                # Use regex to split by sentence endings followed by space, keeping the delimiter
+                sentences = re.split(r'(?<=[.!?])\s+', bot_response_text)
+
                 for i, sentence in enumerate(sentences):
                     sentence = sentence.strip()
-                    if not sentence: continue
-                    end_punctuation = '.'
-                    if sentence.endswith('!'): end_punctuation = '!'
-                    elif sentence.endswith('?'): end_punctuation = '?'
-                    sentence_to_add = sentence if sentence.endswith(('.', '!', '?')) else sentence + end_punctuation
-                    sentence_to_add += " " if i < len(sentences) - 1 else ""
+                    if not sentence: continue # Skip empty strings from split
 
-                    if len(current_part) + len(sentence_to_add) < 1990:
+                    # Add sentence and a space (will strip later)
+                    sentence_to_add = sentence + " "
+
+                    # Check if adding this sentence exceeds the limit
+                    if len(current_part) + len(sentence_to_add) < 1990: # Use a buffer below 2000
                         current_part += sentence_to_add
                     else:
+                        # Current sentence doesn't fit, add the current part to responses
                         if current_part:
                             response_parts.append(current_part.strip())
+                        # Handle case where a single sentence/fragment is itself too long
                         if len(sentence_to_add) > 1990:
-                             logger.warning(f"Single sentence fragment is too long ({len(sentence_to_add)}), truncating.")
-                             response_parts.append(sentence_to_add[:1990].strip())
-                             current_part = ""
+                             logger.warning(f"Single sentence/fragment is too long ({len(sentence)}), splitting it by character.")
+                             # Fallback to simple character split for this long fragment
+                             sentence_chunks = [sentence_to_add[j:j+1990] for j in range(0, len(sentence_to_add), 1990)]
+                             response_parts.extend(sentence_chunks)
+                             current_part = "" # Start fresh after adding chunks
                         else:
-                             current_part = sentence_to_add
+                            # Start a new part with the current sentence
+                            current_part = sentence_to_add
 
+                # Add any remaining text in current_part
                 if current_part:
                     response_parts.append(current_part.strip())
 
+                # Fallback to simple character split if the sentence splitting logic somehow failed or resulted in nothing
                 if not response_parts:
-                    logger.warning("Sentence splitting failed or yielded no parts, falling back to character split.")
+                    logger.warning("Sentence splitting failed or yielded no parts after processing, falling back to simple character split.")
                     response_parts = []
                     for i in range(0, len(bot_response_text), 1990):
                         response_parts.append(bot_response_text[i:i+1990])
 
+
+                # Send the parts, replying to the original message with the first part
                 first_part = True
                 for part in response_parts:
-                    if not part.strip(): continue
+                    if not part.strip(): continue # Don't send empty parts that might result from splitting
                     if first_part:
                         await message.reply(part.strip(), mention_author=False)
                         first_part = False
                     else:
                         await message.channel.send(part.strip())
-                    await asyncio.sleep(0.6)
-
+                    # Add a small delay to prevent hitting Discord rate limits or sending too fast
+                    await asyncio.sleep(0.8) # Increased slightly for safety
 
             logger.info(f"Successfully sent REVISED V3 Pekora persona response (Safety=BLOCK_NONE) to channel {channel_id}.")
 
         except Exception as e:
+            # Catch any unexpected errors during the AI interaction or sending process
             logger.error(f"Channel {channel_id}: Unhandled exception during REVISED V3 Pekora processing (Safety=BLOCK_NONE). Type: {type(e).__name__}, Error: {e}", exc_info=True)
             try:
-                # (Error messages remain the same)
+                # Attempt to send a generic error message back to Discord
                 await message.reply(random.choice([
                     "Pain... An error happened. Sorry.",
                     "Ah! System had small problem! Maybe try again?",
@@ -376,14 +438,16 @@ async def on_message(message: discord.Message):
                     "Error peko! Try again?"
                     ]), mention_author=False)
             except discord.errors.Forbidden:
+                 # Log if the bot doesn't have permission to send messages
                  logger.error(f"Channel {channel_id}: Bot lacks permission to send error reply message (Forbidden).")
             except Exception as inner_e:
+                 # Log if even sending the error message fails
                  logger.error(f"Channel {channel_id}: Failed to send the error message back to Discord: {inner_e}", exc_info=True)
 
 
 # --- Run the Bot ---
-# (Run logic remains the same)
 if __name__ == "__main__":
+    # Check if the Discord token is set before attempting to run
     if not DISCORD_TOKEN:
         logger.critical("DISCORD_BOT_TOKEN environment variable not found. Exiting.")
     else:
@@ -391,11 +455,12 @@ if __name__ == "__main__":
         logger.info(f"Using AI Model: {MODEL_NAME}")
         logger.critical(">>> 🚨 Preparing to run bot with REVISED V3 Usada Pekora Persona and SAFETY FILTERS DISABLED (BLOCK_NONE). MONITOR CLOSELY. 🚨 <<<")
         try:
+            # Run the bot client. Pass the discord_log_handler to route discord.py logs
             client.run(DISCORD_TOKEN, log_handler=discord_log_handler, log_level=logging.INFO)
         except discord.errors.LoginFailure:
-            logger.critical("Invalid Discord Bot Token provided.")
+            logger.critical("Invalid Discord Bot Token provided. Please check your .env file.")
         except discord.errors.PrivilegedIntentsRequired as e:
              logger.critical(f"Privileged Intents (Message Content or Guilds) are not enabled or missing: {e}")
-             print("\n *** ACTION NEEDED: Ensure 'Message Content Intent' AND potentially 'Server Members Intent' are enabled in Discord Dev Portal ***\n")
+             print("\n *** ACTION NEEDED: Ensure 'Message Content Intent' AND potentially 'Server Members Intent' are enabled in Discord Developer Portal -> Bot -> Privileged Gateway Intents ***\n")
         except Exception as e:
              logger.critical(f"An unexpected error occurred while starting or running the bot: {e}", exc_info=True)
