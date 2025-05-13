@@ -138,7 +138,7 @@ if not GOOGLE_API_KEY:
     exit()
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
-    MODEL_NAME = 'gemini-1.5-flash-latest' # Or 'gemini-1.5-pro-latest' for potentially better (but slower/costlier) responses
+    MODEL_NAME = 'gemini-2.5-flash-latest' # Or 'gemini-1.5-pro-latest' for potentially better (but slower/costlier) responses
     logger.info(f"Configuring Google Generative AI with multimodal model: {MODEL_NAME}")
     safety_settings = {
         'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE',
