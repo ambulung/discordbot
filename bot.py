@@ -230,7 +230,6 @@ async def on_ready():
     print(f" AI Model: {MODEL_NAME}")
     print(f" YouTube API: {'ENABLED' if youtube_service else 'DISABLED'}")
     print(" Status:   Ready")
-    print(" Persona:  Usada Pekora (V7 - Subtle YouTube Reactions)")
     print(f" Trigger:  @Mention, Reply, or Keywords ({', '.join(kw.pattern for kw in AMBIENT_KEYWORDS_REGEX)})")
     print(" 🚨 Safety:   BLOCK_NONE (FILTERS DISABLED) 🚨")
     print("-" * 50)
