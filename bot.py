@@ -125,36 +125,22 @@ async def on_message(message: discord.Message):
     if not client.user.mentioned_in(message):
         return
 
-    channel_id = message.channel.id
-    if channel_id not in conversation_history:
-        conversation_history[channel_id] = deque(maxlen=MAX_HISTORY_MESSAGES)
-
     mention_tag_short = f'<@{client.user.id}>'
     mention_tag_long = f'<@!{client.user.id}>'
     user_prompt = message.content.replace(mention_tag_long, '').replace(mention_tag_short, '').strip()
 
-    input_text = user_prompt
+    input_parts = [user_prompt] if user_prompt else []
 
-    # Check for YouTube video link in message and append info if found
     match = YOUTUBE_LINK_REGEX.search(message.content)
     if match:
         video_id = match.group(6)
         if video_id:
             details = await get_youtube_video_details(video_id)
             if details:
-                input_text += f" (Video title: '{details['title']}', Uploader: '{details['channel_title']}')"
-
-    # Add user message to history
-    conversation_history[channel_id].append({'role': 'user', 'content': input_text})
-
-    # Build message list for AI with system instruction + history
-    messages_for_ai = [{'role': 'system', 'content': PERSONA_INSTRUCTION}]
-    messages_for_ai.extend(conversation_history[channel_id])
+                input_parts[0] += f" (Video title: '{details['title']}', Uploader: '{details['channel_title']}')"
 
     try:
-        response = await model.generate_content_async(messages_for_ai)
-        # Add assistant reply to history
-        conversation_history[channel_id].append({'role': 'assistant', 'content': response.text})
+        response = await model.generate_content_async([{'role': 'user', 'parts': input_parts}])
         await message.reply(response.text, mention_author=False)
     except Exception as e:
         logger.error(f"Error during AI response: {e}")
