@@ -68,7 +68,7 @@ logger = logging.getLogger("PekoraBot")
 # --- Generative AI Model Configuration ---
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash-preview-04-17",
+    model_name="gemini-2.5-flash",
     system_instruction=PERSONA_INSTRUCTION,
     safety_settings={
         'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE',
