@@ -70,7 +70,7 @@ genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel(
     # <--- FIX 2: Corrected model name. "gemini-2.5-flash" is not a valid public name.
     # 'gemini-1.5-flash-latest' is the current recommended flash model.
-    model_name="gemini-1.5-flash-latest",
+    model_name="gemini-2.5-flash",
     system_instruction=PERSONA_INSTRUCTION,
     safety_settings={
         'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE',
