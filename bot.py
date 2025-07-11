@@ -92,7 +92,11 @@ YOUTUBE_LINK_REGEX = re.compile(
     r'(watch\?v=|embed/|v/|.+\?v=|shorts/)?'
     r'([^&=%\?\s]{11})', re.IGNORECASE)
 
+yt_cache = {}
+
 async def get_youtube_video_details(video_id: str):
+    if video_id in yt_cache:
+        return yt_cache[video_id]
     if not youtube_service:
         return None
     try:
@@ -101,11 +105,16 @@ async def get_youtube_video_details(video_id: str):
         response = await loop.run_in_executor(None, request.execute)
         if response and response.get("items"):
             item = response["items"][0]["snippet"]
-            return {"title": item.get("title"), "channel_title": item.get("channelTitle")}
+            details = {"title": item.get("title"), "channel_title": item.get("channelTitle")}
+            yt_cache[video_id] = details
+            return details
         return None
     except HttpError as e:
         logger.error(f"YouTube API error: {e}")
         return None
+
+# --- Cooldown Setup (Per Channel) ---
+cooldowns = {}
 
 # --- Discord Bot Setup ---
 intents = discord.Intents.default()
@@ -124,6 +133,13 @@ async def on_message(message: discord.Message):
 
     if not client.user.mentioned_in(message):
         return
+
+    # Cooldown: 3 seconds per channel
+    now = asyncio.get_event_loop().time()
+    last_time = cooldowns.get(message.channel.id, 0)
+    if now - last_time < 3:
+        return
+    cooldowns[message.channel.id] = now
 
     mention_tag_short = f'<@{client.user.id}>'
     mention_tag_long = f'<@!{client.user.id}>'
